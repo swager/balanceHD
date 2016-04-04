@@ -1,0 +1,7 @@
+Package: balanceHD
+Title: Approximately balanced estimation of average treatment effects in high dimensions.
+Version: 1.0
+Imports: glmnet, quadprog
+Suggests: randomForest
+License: What license is it under?
+LazyData: true
