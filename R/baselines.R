@@ -69,7 +69,7 @@ twostep.lasso.ate = function(X, Y, W, target.pop=c(0, 1), fit.propensity = TRUE)
 	
 	if (length(strong.coef) == 0) {
 		
-		return(naive.ate(X, Y, W, estimate.se = estimate.se))
+		return(naive.ate(X, Y, W))
 		
 	}
 	
