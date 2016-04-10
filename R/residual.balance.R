@@ -30,14 +30,16 @@ residualBalance.mean = function(XW, YW,
 		residuals = YW - predict(lasso.fit, newx = XW)
 		mu.residual = sum(gamma * residuals)
 		
-		var.hat = sum(gamma^2 * residuals^2)
+		var.hat = sum(gamma^2 * residuals^2) *
+                # degrees of freedom correction
+                  length(gamma) / max(1, length(gamma) - sum(coef(lasso.fit) != 0))
 		
 	} else if (fit.method == "none") {
 	
 		mu.lasso = 0
 		mu.residual = sum(gamma * YW)
 		
-		var.hat = sum(gamma^2 * YW^2)
+		var.hat = NA
 	
 	} else {
 		
@@ -47,6 +49,17 @@ residualBalance.mean = function(XW, YW,
 	
 	mu.hat = mu.lasso + mu.residual
 	c(mu.hat, var.hat)
+}
+
+
+residualBalance.estimate.var = function(XW, YW, alpha, estimate.se) {
+
+  # Don't waste time
+  if (!estimate.se) return(NA)
+  
+  lasso.fit = glmnet::cv.glmnet(XW, YW, alpha = alpha)
+  residuals = YW - predict(lasso.fit, newx = XW)
+  mean(residuals^2) / max(1, length(YW) - sum(coef(lasso.fit) != 0))
 }
 
 #' Estimate ATE via approximate residual balancing
@@ -105,11 +118,11 @@ residualBalance.ate = function(X, Y, W,
 	} else if (setequal(target.pop, c(1))) {
 		
 		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha)
-		est1 = c(mean(Y[W==1]), var(Y[W==1]) / sum(W == 1))
+		est1 = c(mean(Y[W==1]), residualBalance.estimate.var(X[W==1,], Y[W==1], alpha, estimate.se))
 		
 	} else if (setequal(target.pop, c(0))) {
 		
-		est0 = c(mean(Y[W==0]), var(Y[W==0]) / sum(W == 0))
+		est0 = c(mean(Y[W==0]), residualBalance.estimate.var(X[W==0,], Y[W==0], alpha, estimate.se))
 		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha)
 		
 	} else {
