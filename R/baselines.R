@@ -25,7 +25,7 @@ naive.ate = function(X, Y, W) {
 #' @return ATE estimate
 #'
 #' @export elnet.ate
-elnet.ate = function(X, Y, W, target.pop=c(0, 1), alpha = 0.5) {
+elnet.ate = function(X, Y, W, target.pop=c(0, 1), alpha = 0.9) {
 
 	# we want ATE for these indices
 	target.idx = which(W %in% target.pop)
