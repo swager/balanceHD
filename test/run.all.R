@@ -6,10 +6,10 @@ library(balanceHD)
 n = 300
 p = 800
 eps = 0.2
-sigma = 0.5
-beta = c(rep(10, 10), rep(sqrt(n)/90, 90), rep(0, p - 100))
-delta.clust = 4 / sqrt(n) * rep(1, p)
-tau = 5
+sigma = 1/10
+beta = c(rep(10, 10), rep(1, 90), rep(0, p - 100))
+delta.clust = rep(1/5, p)
+tau = 0
 
 # Generate data
 CLUST = rbinom(n, 1, 0.5)

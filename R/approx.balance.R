@@ -8,7 +8,7 @@
 #' @param zeta tuning parameter, see (*)
 #' @param allow.negative.weights are the gammas allowed to be negative?
 #'
-#' @return gamma, the minimzer of (*)
+#' @return gamma, the minimizer of (*)
 #'
 #' @export approx.balance
 approx.balance = function(M, balance.target, zeta = 0.5, allow.negative.weights = FALSE) {

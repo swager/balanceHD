@@ -76,9 +76,9 @@ residualBalance.estimate.var = function(XW, YW, alpha, estimate.se) {
 #' @param fit.method the method used to fit mu(x, w) = E[Y | X = x, W = w]
 #' @param alpha tuning paramter for glmnet
 #' @param scale.X whether non-binary features should be noramlized
-#' @param estimate.se ...
+#' @param estimate.se whether to return estimate of standard error
 #'
-#' @return ATE estimate, along with (optional) variance estimate
+#' @return ATE estimate, along with (optional) standard error estimate
 #'
 #' @export residualBalance.ate
 residualBalance.ate = function(X, Y, W,
