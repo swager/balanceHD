@@ -17,7 +17,7 @@ n = 400
 p = 1000
 tau = 7
 nclust = 10
-beta = 10 / (1:p) / sqrt(sum(1/(1:p)))
+beta = 2 / (1:p) / sqrt(sum(1/(1:p)^2))
 clust.ptreat = rep(c(0.1, 0.9), nclust/2)
 
 cluster.center = 0.5 * matrix(rnorm(nclust * p), nclust, p)
