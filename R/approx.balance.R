@@ -17,6 +17,16 @@ approx.balance = function(M, balance.target, zeta = 0.5, allow.negative.weights 
 		stop("approx.balance: zeta must be between 0 and 1")
 	}
 	
+	# The system is effectively
+	# minimize zeta * delta + (1 - zeta) * ||gamma||^2
+	# subject to
+	#   sum gamma = 1
+	#   delta + (M'gamma)_j >= balance.target_j
+	#   delta - (M'gamma)_j >= -balance.target_j
+	#
+	# The last two constraints mean that
+	# delta = ||M'gamma - balance.target||_infty
+	
 	Dmat = diag(c(zeta, rep(1 - zeta, nrow(M))))
 	dvec = rep(0, 1 + nrow(M))
 	Amat = cbind(
