@@ -5,7 +5,8 @@
 \title{Estimate mean outcome at balance.target via residual balancing}
 \usage{
 residualBalance.mean(XW, YW, balance.target, allow.negative.weights = FALSE,
-  zeta, fit.method = c("elnet", "none"), alpha)
+  use.active.mask = FALSE, zeta, kappa, fit.method = c("elnet", "none"),
+  alpha)
 }
 \arguments{
 \item{XW}{the input features for the sub-population of interest}
@@ -16,7 +17,11 @@ residualBalance.mean(XW, YW, balance.target, allow.negative.weights = FALSE,
 
 \item{allow.negative.weights}{whether negative gammas are allowed for balancing}
 
+\item{use.active.mask}{whether to penalize imbalance more aggressively along active coordinates}
+
 \item{zeta}{tuning parameter for selecting approximately balancing weights}
+
+\item{kappa}{controls strength of active mask penalty, if used}
 
 \item{fit.method}{the method used to fit mu(x) = E[YW | XW = x]}
 

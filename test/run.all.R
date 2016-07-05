@@ -20,6 +20,7 @@ Y = X %*% beta + rnorm(n, 0, 1) + tau * W
 # Run residual balancing
 tau.rb.all = residualBalance.ate(X, Y, W, estimate.se = TRUE)
 tau.rb = tau.rb.all[1]
+tau.rb.plus = residualBalance.ate(X, Y, W, use.active.mask = TRUE)
 tau.rb.negative = residualBalance.ate(X, Y, W, allow.negative.weights = TRUE)
 tau.rb.plain = residualBalance.ate(X, Y, W, fit.method = "none")
 
@@ -38,6 +39,7 @@ results = c(Naive=tau.naive,
 		Elnet=tau.elnet,
 		Twostep = tau.twostep,
 		ResidBalance=tau.rb,
+		ResidBalancePlus=tau.rb.plus,
 		ResidBalanceNegative=tau.rb.negative,
 		ResidBalancePlain=tau.rb.plain,
 		IPW.Lasso = tau.ipw.l1,

@@ -5,8 +5,9 @@
 \title{Estimate ATE via approximate residual balancing}
 \usage{
 residualBalance.ate(X, Y, W, target.pop = c(0, 1),
-  allow.negative.weights = FALSE, zeta = 0.5, fit.method = c("elnet",
-  "none"), alpha = 0.9, scale.X = TRUE, estimate.se = FALSE)
+  allow.negative.weights = FALSE, use.active.mask = FALSE, zeta = 0.5,
+  kappa = 1, fit.method = c("elnet", "none"), alpha = 0.9,
+  scale.X = TRUE, estimate.se = FALSE)
 }
 \arguments{
 \item{X}{the input features}
@@ -22,7 +23,11 @@ residualBalance.ate(X, Y, W, target.pop = c(0, 1),
 
 \item{allow.negative.weights}{whether negative gammas are allowed for balancing}
 
+\item{use.active.mask}{whether to penalize imbalance more aggressively along active coordinates}
+
 \item{zeta}{tuning parameter for selecting approximately balancing weights}
+
+\item{kappa}{controls strength of active mask penalty, if used}
 
 \item{fit.method}{the method used to fit mu(x, w) = E[Y | X = x, W = w]}
 

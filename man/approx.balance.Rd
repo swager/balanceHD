@@ -4,8 +4,8 @@
 \alias{approx.balance}
 \title{Compute approximately balancing weights}
 \usage{
-approx.balance(M, balance.target, zeta = 0.5,
-  allow.negative.weights = FALSE)
+approx.balance(M, balance.target, zeta = 0.5, active.mask = NULL,
+  kappa = 1, allow.negative.weights = FALSE)
 }
 \arguments{
 \item{M}{the feature matrix, see (*)}
@@ -13,6 +13,12 @@ approx.balance(M, balance.target, zeta = 0.5,
 \item{balance.target}{the target solution, see (*)}
 
 \item{zeta}{tuning parameter, see (*)}
+
+\item{active.mask}{set of "active" coordinates, along which
+imbalance should be controlled more aggressively (optional)}
+
+\item{kappa}{relative magnitude of the variance and active
+       mask penalties}
 
 \item{allow.negative.weights}{are the gammas allowed to be negative?}
 }

@@ -4,7 +4,9 @@
 #' @param YW the observed responses for the sub-population of interest
 #' @param balance.target the desired center of the dataset
 #' @param allow.negative.weights whether negative gammas are allowed for balancing
+#' @param use.active.mask whether to penalize imbalance more aggressively along active coordinates
 #' @param zeta tuning parameter for selecting approximately balancing weights
+#' @param kappa controls strength of active mask penalty, if used
 #' @param fit.method the method used to fit mu(x) = E[YW | XW = x]
 #' @param alpha tuning paramter for glmnet
 #'
@@ -14,18 +16,27 @@
 residualBalance.mean = function(XW, YW,
 		balance.target,
 		allow.negative.weights = FALSE,
+		use.active.mask = FALSE,
 		zeta,
+		kappa,
 		fit.method = c("elnet", "none"),
 		alpha) {
 	
 	fit.method = match.arg(fit.method)
 	
-	gamma = approx.balance(XW, balance.target, zeta = zeta, allow.negative.weights = allow.negative.weights)
-	
 	if (fit.method == "elnet") {
 		
 		lasso.fit = glmnet::cv.glmnet(XW, YW, alpha = alpha)
 		mu.lasso = predict(lasso.fit, newx = matrix(balance.target, 1, length(balance.target)))
+		
+		active.mask = NULL
+		if (use.active.mask) {
+			active.mask = as.numeric(coef(lasso.fit)[-1] != 0)
+		}
+		gamma = approx.balance(XW, balance.target,
+		          zeta = zeta, kappa = kappa,
+		          allow.negative.weights = allow.negative.weights,
+		          active.mask = active.mask)
 		
 		residuals = YW - predict(lasso.fit, newx = XW)
 		mu.residual = sum(gamma * residuals)
@@ -35,6 +46,8 @@ residualBalance.mean = function(XW, YW,
                   length(gamma) / max(1, length(gamma) - sum(coef(lasso.fit) != 0))
 		
 	} else if (fit.method == "none") {
+	
+		gamma = approx.balance(XW, balance.target, zeta = zeta, allow.negative.weights = allow.negative.weights)
 	
 		mu.lasso = 0
 		mu.residual = sum(gamma * YW)
@@ -72,7 +85,9 @@ residualBalance.estimate.var = function(XW, YW, alpha, estimate.se) {
 #'            0: average treatment effect for controls
 #'            1: average treatment effect for treated
 #' @param allow.negative.weights whether negative gammas are allowed for balancing
+#' @param use.active.mask whether to penalize imbalance more aggressively along active coordinates
 #' @param zeta tuning parameter for selecting approximately balancing weights
+#' @param kappa controls strength of active mask penalty, if used
 #' @param fit.method the method used to fit mu(x, w) = E[Y | X = x, W = w]
 #' @param alpha tuning paramter for glmnet
 #' @param scale.X whether non-binary features should be noramlized
@@ -83,8 +98,10 @@ residualBalance.estimate.var = function(XW, YW, alpha, estimate.se) {
 #' @export residualBalance.ate
 residualBalance.ate = function(X, Y, W,
 		target.pop=c(0, 1),
-		allow.negative.weights = FALSE,
+		allow.negative.weights=FALSE,
+		use.active.mask=FALSE,
 		zeta=0.5,
+		kappa=1,
 		fit.method = c("elnet", "none"),
 		alpha=0.9,
 		scale.X = TRUE,
@@ -112,18 +129,18 @@ residualBalance.ate = function(X, Y, W,
 	
 	if (setequal(target.pop, c(0, 1))) {
 		
-		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha)
-		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha)
+		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, use.active.mask, zeta, kappa, fit.method, alpha)
+		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, use.active.mask, zeta, kappa, fit.method, alpha)
 		
 	} else if (setequal(target.pop, c(1))) {
 		
-		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha)
+		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, use.active.mask, zeta, kappa, fit.method, alpha)
 		est1 = c(mean(Y[W==1]), residualBalance.estimate.var(X[W==1,], Y[W==1], alpha, estimate.se))
 		
 	} else if (setequal(target.pop, c(0))) {
 		
 		est0 = c(mean(Y[W==0]), residualBalance.estimate.var(X[W==0,], Y[W==0], alpha, estimate.se))
-		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha)
+		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, use.active.mask, zeta, kappa, fit.method, alpha)
 		
 	} else {
 		stop("Invalid target.pop.")

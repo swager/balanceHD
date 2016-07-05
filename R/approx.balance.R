@@ -7,11 +7,20 @@
 #' @param balance.target the target solution, see (*)
 #' @param zeta tuning parameter, see (*)
 #' @param allow.negative.weights are the gammas allowed to be negative?
+#' @param active.mask set of "active" coordinates, along which
+#'        imbalance should be controlled more aggressively (optional)
+#' @param kappa relative magnitude of the variance and active
+#'        mask penalties
 #'
 #' @return gamma, the minimizer of (*)
 #'
 #' @export approx.balance
-approx.balance = function(M, balance.target, zeta = 0.5, allow.negative.weights = FALSE) {
+approx.balance = function(M,
+                          balance.target,
+                          zeta = 0.5,
+                          active.mask = NULL,
+                          kappa = 1,
+                          allow.negative.weights = FALSE) {
 	
 	if (zeta <= 0 || zeta >= 1) {
 		stop("approx.balance: zeta must be between 0 and 1")
@@ -34,6 +43,15 @@ approx.balance = function(M, balance.target, zeta = 0.5, allow.negative.weights 
 		rbind(rep(1, ncol(M)), M ),
 		rbind(rep(1, ncol(M)), -M))
 	bvec = c(1, balance.target, -balance.target)
+	
+	# Add an extra 2-norm penalty for imbalance along
+	# directions corresponding to active features
+	if (!is.null(active.mask)) {
+		A = M %*% diag(active.mask)
+		active.weight = (1 - zeta) * kappa * sum(active.mask) / sum(A^2)
+		Dmat[-1, -1] = Dmat[-1, -1] + active.weight * A %*% t(A)
+		dvec = dvec + active.weight * c(0, A %*% balance.target) 
+	}
 	
 	if (!allow.negative.weights) {
 		LB = 1/nrow(M)/10000
