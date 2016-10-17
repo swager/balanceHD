@@ -18,7 +18,8 @@
 #' @export ipw.ate
 ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 			fit.method = c("elnet", "none"), alpha.fit = 0.9,
-			prop.method = c("elnet", "randomforest"), alpha.prop = 0.5) {
+			prop.method = c("elnet", "randomforest"), alpha.prop = 0.5,
+			estimate.se=FALSE) {
 	
 	fit.method = match.arg(fit.method)
 	prop.method = match.arg(prop.method)
@@ -107,5 +108,11 @@ ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 	mu.full = mu.main + mu.residual
 
 	tau.hat = mu.full[2] - mu.full[1]
-	tau.hat	
+	
+	if(estimate.se == FALSE) {
+		tau.hat
+	} else {
+		var.hat = sum(prop.weights^2 * residuals^2)
+		c(tau.hat, sqrt(var.hat))
+	}
 }
