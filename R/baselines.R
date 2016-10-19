@@ -94,16 +94,16 @@ twostep.lasso.ate = function(X, Y, W, target.pop=c(0, 1), fit.propensity = TRUE,
 		}
 	
 		reg.df = data.frame(feat = X[,coefs], Y = Y, row.names = 1:nrow(X))
-		center = matrix(apply(reg.df, 2, mean), 1, ncol(reg.df))
-		colnames(center) = names(reg.df)
-		center.df = data.frame(center)
+		center = apply(reg.df[target.idx,], 2, mean)
+		center.df = data.frame(matrix(center, 1, ncol(reg.df)))
+		names(center) = names(reg.df)
 	
 		fit.sel = lm(Y ~ ., data = reg.df[W == ww,,drop=FALSE])
 		lm.pred = predict(fit.sel, newdata = center.df)
 	
 		if(estimate.se) {
 			M = sandwich::sandwich(fit.sel)
-			lm.var = c(1, apply(reg.df, 2, mean)[-ncol(reg.df)]) %*% M %*%  c(1, apply(reg.df, 2, mean)[-ncol(reg.df)]) 
+			lm.var = c(1, center[-ncol(reg.df)]) %*% M %*%  c(1, center[-ncol(reg.df)]) 
 		} else {
 			lm.var = NA
 		}
