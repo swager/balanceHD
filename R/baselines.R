@@ -93,12 +93,20 @@ twostep.lasso.ate = function(X, Y, W, target.pop=c(0, 1), fit.propensity = TRUE,
 			coefs = which(strong.coef %in% coef(list(lasso.fit0, lasso.fit1)[[1 + ww]])[-1] != 0)
 		}
 	
-		reg.df = data.frame(feat = X[,coefs], Y = Y, row.names = 1:nrow(X))
-		center = apply(reg.df[target.idx,], 2, mean)
-		center.df = data.frame(matrix(center, 1, ncol(reg.df)))
-		names(center.df) = names(reg.df)
-	
-		fit.sel = lm(Y ~ ., data = reg.df[W == ww,,drop=FALSE])
+		repeat {
+			print(coefs)
+			reg.df = data.frame(feat = X[,coefs], Y = Y, row.names = 1:nrow(X))
+			center = apply(reg.df[target.idx,], 2, mean)
+			center.df = data.frame(matrix(center, 1, ncol(reg.df)))
+			names(center.df) = names(reg.df)
+			fit.sel = lm(Y ~ ., data = reg.df[W == ww,,drop=FALSE])
+			if(sum(is.na(coef(fit.sel))) == 0) {
+				break
+			} else {
+				coefs = coefs[-sample.int(length(coefs), 1)]
+			}
+		}
+		
 		lm.pred = predict(fit.sel, newdata = center.df)
 	
 		if(estimate.se) {
