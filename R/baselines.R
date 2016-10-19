@@ -103,7 +103,7 @@ twostep.lasso.ate = function(X, Y, W, target.pop=c(0, 1), fit.propensity = TRUE,
 	
 		if(estimate.se) {
 			M = sandwich::sandwich(fit.sel)
-			lm.var = c(1, center[,-ncol(center)]) %*% M %*%  c(1, center[,-ncol(center)]) 
+			lm.var = c(1, apply(reg.df, 2, mean)[-ncol(reg.df)]) %*% M %*%  c(1, apply(reg.df, 2, mean)[-ncol(reg.df)]) 
 		} else {
 			lm.var = NA
 		}
