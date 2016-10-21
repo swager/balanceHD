@@ -96,7 +96,7 @@ twostep.lasso.ate = function(X, Y, W, target.pop=c(0, 1), fit.propensity = TRUE,
 		repeat {
 			print(coefs)
 			reg.df = data.frame(feat = X[,coefs], Y = Y, row.names = 1:nrow(X))
-			center = apply(reg.df[target.idx,], 2, mean)
+			center = apply(reg.df[target.idx,,drop=FALSE], 2, mean)
 			center.df = data.frame(matrix(center, 1, ncol(reg.df)))
 			names(center.df) = names(reg.df)
 			fit.sel = lm(Y ~ ., data = reg.df[W == ww,,drop=FALSE])
