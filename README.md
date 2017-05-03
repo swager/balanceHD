@@ -8,6 +8,8 @@ library(devtools)
 install_github("swager/balanceHD")
 ```
 
+The package currently works with two optimizers: `pogs` and `quadprog`. `quadprog` is a standard `R` optimization library, and is available directly from CRAN. `pogs` is a more performant optimizer, based on ADMM, which must be installed separately; see [this page](https://github.com/foges/pogs/blob/master/src/interface_r/README.md) for instructions. For large problems (say, n > 1000) we recommend using `pogs`.
+
 Example usage:
 
 ```R
