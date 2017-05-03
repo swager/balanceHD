@@ -3,5 +3,9 @@ Title: Approximately balanced estimation of average treatment effects in high di
 Version: 1.0
 Author: Susan Athey, Guido Imbens, and Stefan Wager
 Maintainer: Stefan Wager <swager@stanford.edu>
-Imports: glmnet, quadprog, sandwich
-Suggests: pogs, randomForest
+Imports: glmnet,
+    quadprog,
+    sandwich
+Suggests: pogs,
+    randomForest,
+    testthat

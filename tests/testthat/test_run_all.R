@@ -1,7 +1,3 @@
-rm(list = ls())
-
-library(balanceHD)
-
 # Data generating specs
 n = 300
 p = 600
@@ -45,7 +41,6 @@ results = c(Naive=tau.naive,
 		IPW.RF = tau.ipw.rf,
 		IPW.Residual = tau.ipw.resid)
 
-print("Error tau.hat - tau:")
-print(results - tau)
-
-print(paste0("95% CI for tau via approx. residual balancing: (", round(tau.rb.all[1] - 1.96 * tau.rb.all[2], 2), ", ", round(tau.rb.all[1] + 1.96 * tau.rb.all[2], 2), ")"))
+test_that("all methods ran", {
+  expect_that( results, is_a("numeric") )
+})
