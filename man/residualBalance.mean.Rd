@@ -6,7 +6,7 @@
 \usage{
 residualBalance.mean(XW, YW, balance.target, allow.negative.weights = FALSE,
   zeta, fit.method = c("elnet", "none"), alpha, optimizer = c("mosek",
-  "pogs", "quadprog"), verbose = FALSE)
+  "pogs", "quadprog"), use.dual = NULL, verbose = FALSE)
 }
 \arguments{
 \item{XW}{the input features for the sub-population of interest}
@@ -24,6 +24,8 @@ residualBalance.mean(XW, YW, balance.target, allow.negative.weights = FALSE,
 \item{alpha}{tuning paramter for glmnet}
 
 \item{optimizer}{which optimizer to use for approximate balancing}
+
+\item{use.dual}{whether balancing should be solved in dual form}
 
 \item{verbose}{whether the optimizer should print progress information}
 }
