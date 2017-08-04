@@ -7,7 +7,7 @@
 residualBalance.ate(X, Y, W, target.pop = c(0, 1),
   allow.negative.weights = FALSE, zeta = 0.5, fit.method = c("elnet",
   "none"), alpha = 0.9, scale.X = TRUE, estimate.se = FALSE,
-  optimizer = c("mosek", "pogs", "quadprog"), use.dual = NULL,
+  optimizer = c("pogs", "quadprog", "mosek"), use.dual = NULL,
   verbose = FALSE)
 }
 \arguments{

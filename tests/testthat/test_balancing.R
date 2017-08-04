@@ -36,8 +36,8 @@ imbalance.qp.free = t(M) %*% gamma.qp.free - balance.target
 test_that("positivity constraint works", {
   expect_true(all(gamma.mosek.positive >0))
   expect_true(all(gamma.mosek.positive2 > -10^(-8)))
-  expect_true(all(gamma.pogs.positive > -10^(-4)))
-  expect_true(all(gamma.pogs.positive2 > -10^(-4)))
+  expect_true(all(gamma.pogs.positive > -10^(-3)))
+  expect_true(all(gamma.pogs.positive2 > -10^(-3)))
   expect_true(all(gamma.qp.positive > 0))
 })
 
@@ -74,8 +74,8 @@ test_that("optimizers match", {
   expect_equal(max(abs(gamma.qp.positive - gamma.mosek.positive2)), 0, tolerance = 5e-4)
   expect_equal(max(abs(gamma.qp.free - gamma.pogs.free)), 0, tolerance = 5e-3)
   expect_equal(max(abs(gamma.qp.positive - gamma.pogs.positive)), 0, tolerance = 5e-2)
-  expect_equal(max(abs(gamma.qp.free - gamma.pogs.free2)), 0, tolerance = 5e-4)
-  expect_equal(max(abs(gamma.qp.positive - gamma.pogs.positive2)), 0, tolerance = 5e-3)
+  expect_equal(max(abs(gamma.qp.free - gamma.pogs.free2)), 0, tolerance = 5e-3)
+  expect_equal(max(abs(gamma.qp.positive - gamma.pogs.positive2)), 0, tolerance = 5e-2)
 })
 
 gamma.mosek.free.zeta9 = approx.balance(M, balance.target = balance.target, optimizer = "mosek", allow.negative.weights = TRUE, use.dual = FALSE, zeta = 0.9)
