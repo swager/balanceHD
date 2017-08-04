@@ -5,8 +5,8 @@
 \title{Compute approximately balancing weights}
 \usage{
 approx.balance(M, balance.target, zeta = 0.5,
-  allow.negative.weights = FALSE, optimizer = c("mosek", "pogs",
-  "quadprog"), use.dual = NULL, verbose = FALSE)
+  allow.negative.weights = FALSE, optimizer = c("pogs", "quadprog",
+  "mosek"), use.dual = NULL, verbose = FALSE)
 }
 \arguments{
 \item{M}{the feature matrix, see (*)}

@@ -22,7 +22,7 @@ approx.balance = function(M,
                           balance.target,
                           zeta = 0.5,
                           allow.negative.weights = FALSE,
-                          optimizer = c("mosek", "pogs", "quadprog"),
+                          optimizer = c("pogs", "quadprog", "mosek"),
                           use.dual = NULL,
                           verbose = FALSE) {
 	
@@ -32,7 +32,7 @@ approx.balance = function(M,
   
   optimizer = match.arg(optimizer)
   if(is.null(use.dual)) {
-  	use.dual = (optimizer %in% c("pogs", "mosek"))
+  	use.dual = (optimizer %in% c("mosek"))
   }
   
   if (optimizer == "mosek") {
@@ -319,7 +319,7 @@ approx.balance.pogs.dual = function(M,
 	g.pogs$h[equality.primal] = kZero(sum(equality.primal))
 
   
-  	pogs.solution = pogs(A.pogs, f.pogs, g.pogs, params = list(rel_tol=1e-6, abs_tol=1e-7, verbose=2*as.numeric(verbose)))
+  	pogs.solution = pogs(A.pogs, f.pogs, g.pogs, params = list(rel_tol=1e-4, abs_tol=1e-5, verbose=2*as.numeric(verbose)))
   
   	primal = -diag(1/sqrt(qvec.primal)) %*% t(A.primal) %*% pogs.solution$x
 	delta = primal[1]
