@@ -8,6 +8,7 @@
 #' @param fit.method the method used to fit mu(x) = E[YW | XW = x]
 #' @param alpha tuning paramter for glmnet
 #' @param optimizer which optimizer to use for approximate balancing
+#' @param verbose whether the optimizer should print progress information
 #'
 #' @return Estimate for E[YW | XW = balance.target], along with variance estimate
 #'
@@ -18,12 +19,13 @@ residualBalance.mean = function(XW, YW,
 		zeta,
 		fit.method = c("elnet", "none"),
 		alpha,
-		optimizer = c("pogs", "quadprog")) {
+		optimizer = c("mosek", "pogs", "quadprog"),
+		verbose = FALSE) {
 	
 	fit.method = match.arg(fit.method)
 	optimizer = match.arg(optimizer)
 	
-	gamma = approx.balance(XW, balance.target, zeta = zeta, allow.negative.weights = allow.negative.weights, optimizer = optimizer)
+	gamma = approx.balance(XW, balance.target, zeta = zeta, allow.negative.weights = allow.negative.weights, optimizer = optimizer, verbose=verbose)
 	
 	if (fit.method == "elnet") {
 		
@@ -81,6 +83,7 @@ residualBalance.estimate.var = function(XW, YW, alpha, estimate.se) {
 #' @param scale.X whether non-binary features should be noramlized
 #' @param estimate.se whether to return estimate of standard error
 #' @param optimizer which optimizer to use for approximate balancing
+#' @param verbose whether the optimizer should print progress information
 #'
 #' @return ATE estimate, along with (optional) standard error estimate
 #'
@@ -93,7 +96,8 @@ residualBalance.ate = function(X, Y, W,
 		alpha=0.9,
 		scale.X = TRUE,
 		estimate.se = FALSE,
-		optimizer = c("pogs", "quadprog")) {
+		optimizer = c("mosek", "pogs", "quadprog"),
+		verbose = FALSE) {
 	
 	fit.method = match.arg(fit.method)
 	optimizer = match.arg(optimizer)
@@ -118,18 +122,18 @@ residualBalance.ate = function(X, Y, W,
 	
 	if (setequal(target.pop, c(0, 1))) {
 		
-		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer)
-		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer)
+		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, verbose=verbose)
+		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, verbose=verbose)
 		
 	} else if (setequal(target.pop, c(1))) {
 		
-		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer)
+		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, verbose=verbose)
 		est1 = c(mean(Y[W==1]), residualBalance.estimate.var(X[W==1,], Y[W==1], alpha, estimate.se))
 		
 	} else if (setequal(target.pop, c(0))) {
 		
 		est0 = c(mean(Y[W==0]), residualBalance.estimate.var(X[W==0,], Y[W==0], alpha, estimate.se))
-		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer)
+		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, verbose=verbose)
 		
 	} else {
 		

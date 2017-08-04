@@ -7,9 +7,12 @@
 #' @param balance.target the target solution, see (*)
 #' @param zeta tuning parameter, see (*)
 #' @param allow.negative.weights are the gammas allowed to be negative?
-#' @param optimizer Which optimizer to use? Pogs is sometimes more efficient, but
+#' @param optimizer Which optimizer to use? Mosek is a commercial solver, but free
+#'                  academic licenses are available. Needs to be installed separately.
+#'                  Pogs runs ADMM and may be useful for large problems, and
 #'                  must be installed separately. Quadprog is the default
 #'                  R solver.
+#' @param verbose whether the optimizer should print progress information
 #'
 #' @return gamma, the minimizer of (*)
 #'
@@ -18,7 +21,8 @@ approx.balance = function(M,
                           balance.target,
                           zeta = 0.5,
                           allow.negative.weights = FALSE,
-                          optimizer = c("pogs", "quadprog")) {
+                          optimizer = c("mosek", "pogs", "quadprog"),
+                          verbose=FALSE) {
 	
 	if (zeta <= 0 || zeta >= 1) {
 		stop("approx.balance: zeta must be between 0 and 1")
@@ -26,7 +30,14 @@ approx.balance = function(M,
   
   optimizer = match.arg(optimizer)
   
-  if (optimizer == "pogs") {
+  if (optimizer == "mosek") {
+    if (suppressWarnings(require("Rmosek", quietly = TRUE))) {
+      gamma = approx.balance.mosek(M, balance.target, zeta, allow.negative.weights, verbose)
+    } else {
+      warning("The mosek optimizer is not installed. Using quadprog instead.")
+      optimizer = "quadprog"
+    }
+  } else if (optimizer == "pogs") {
     if (suppressWarnings(require("pogs", quietly = TRUE))) {
       gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights)
     } else {
@@ -47,32 +58,88 @@ approx.balance.quadprog = function(M,
                                    balance.target,
                                    zeta = 0.5,
                                    allow.negative.weights = FALSE) {
+        # The system is effectively
+        # minimize zeta * delta^2 + (1 - zeta) * ||gamma||^2
+        # subject to
+        #   sum gamma = 1
+        #   delta + (M'gamma)_j >= balance.target_j
+        #   delta - (M'gamma)_j >= -balance.target_j
+        #
+        # The last two constraints mean that
+        # delta = ||M'gamma - balance.target||_infty
+        
+        Dmat = diag(c(zeta, rep(1 - zeta, nrow(M))))
+        dvec = rep(0, 1 + nrow(M))
+        Amat = cbind(
+                c(0, rep(1, nrow(M))),
+                rbind(rep(1, ncol(M)), M ),
+                rbind(rep(1, ncol(M)), -M))
+        bvec = c(1, balance.target, -balance.target)
+        
+        if (!allow.negative.weights) {
+                LB = 1/nrow(M)/10000
+                Amat = cbind(Amat, rbind(rep(0, nrow(M)), diag(rep(1, nrow(M)))))
+                bvec = c(bvec, rep(LB, nrow(M)))
+        }
+        
+        balance.soln = quadprog::solve.QP(Dmat, dvec, Amat, bvec, meq = 1)
+        gamma = balance.soln$solution[-1]
+        gamma
+}
+
+# Find approximately balancing weights using mosek
+approx.balance.mosek = function(M,
+                                balance.target,
+                                zeta = 0.5,
+                                allow.negative.weights = FALSE,
+                                verbose = FALSE) {
 	# The system is effectively
 	# minimize zeta * delta^2 + (1 - zeta) * ||gamma||^2
 	# subject to
 	#   sum gamma = 1
-	#   delta + (M'gamma)_j >= balance.target_j
-	#   delta - (M'gamma)_j >= -balance.target_j
+	#    -Infty <= -delta + (M'gamma)_j <= balance.target_j
+	#   balance.target_j <= delta + (M'gamma)_j <= Infty
+	#   0 <= gamma <= gamma.max (lower bound is optional)
 	#
-	# The last two constraints mean that
+	# The second and third constraints mean that
 	# delta = ||M'gamma - balance.target||_infty
+	Qmat = list(i = 1:(1 + nrow(M)),
+	            j = 1:(1 + nrow(M)),
+	            v = 2 * c(zeta, rep(1 - zeta, nrow(M))))
+	cvec = rep(0, 1 + nrow(M))
+	Amat = Matrix::Matrix(rbind(
+	  	c(0, rep(1, nrow(M))),
+		cbind(rep(-1, ncol(M)), t(M) ),
+		cbind(rep(+1, ncol(M)), t(M))))
+	Amat = as(Amat, "CsparseMatrix")
+	buc = c(1, balance.target,  rep(Inf, ncol(M)))
+	blc = c(1, rep(-Inf, ncol(M)), balance.target)
 	
-	Dmat = diag(c(zeta, rep(1 - zeta, nrow(M))))
-	dvec = rep(0, 1 + nrow(M))
-	Amat = cbind(
-		c(0, rep(1, nrow(M))),
-		rbind(rep(1, ncol(M)), M ),
-		rbind(rep(1, ncol(M)), -M))
-	bvec = c(1, balance.target, -balance.target)
+	gamma.max = 1/nrow(M)^(2/3)
+	bux = c(Inf, rep(gamma.max, nrow(M)))
 	
-	if (!allow.negative.weights) {
-		LB = 1/nrow(M)/10000
-		Amat = cbind(Amat, rbind(rep(0, nrow(M)), diag(rep(1, nrow(M)))))
-		bvec = c(bvec, rep(LB, nrow(M)))
+	if (allow.negative.weights) {
+		blx = c(0, -rep(gamma.max, nrow(M)))
+	} else {
+	 	blx = rep(0, nrow(M) + 1)
 	}
 	
-	balance.soln = quadprog::solve.QP(Dmat, dvec, Amat, bvec, meq = 1)
-	gamma = balance.soln$solution[-1]
+	mosek.problem <- list()
+	mosek.problem$sense <- "min"
+	mosek.problem$qobj <- Qmat
+	mosek.problem$c <- cvec
+	mosek.problem$A <-Amat
+	mosek.problem$bc <- rbind(blc = blc, buc = buc)
+	mosek.problem$bx <- rbind(blx = blx, bux = bux)
+	
+	if (verbose) {
+		mosek.out = Rmosek::mosek(mosek.problem)
+	} else {
+		mosek.out = Rmosek::mosek(mosek.problem, opts=list(verbose=0))
+	}
+	
+	delta = mosek.out$sol$itr$xx[1]
+	gamma =  mosek.out$sol$itr$xx[1 + 1:nrow(M)]
 	gamma
 }
 
