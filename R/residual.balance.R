@@ -27,7 +27,7 @@ residualBalance.mean = function(XW, YW,
 	fit.method = match.arg(fit.method)
 	optimizer = match.arg(optimizer)
 	if(is.null(use.dual)) {
-	  use.dual = (optimizer == "mosek")
+	  use.dual = (optimizer %in% c("pogs", "mosek"))
 	}
 	
 	gamma = approx.balance(XW, balance.target, zeta = zeta, allow.negative.weights = allow.negative.weights, optimizer = optimizer, use.dual = use.dual, verbose=verbose)
@@ -109,7 +109,7 @@ residualBalance.ate = function(X, Y, W,
 	fit.method = match.arg(fit.method)
 	optimizer = match.arg(optimizer)
 	if(is.null(use.dual)) {
-	  use.dual = (optimizer == "mosek")
+	  use.dual = (optimizer %in% c("pogs", "mosek"))
 	}
 	
 	if (estimate.se & fit.method == "none") {

@@ -32,7 +32,7 @@ approx.balance = function(M,
   
   optimizer = match.arg(optimizer)
   if(is.null(use.dual)) {
-  	use.dual = (optimizer == "mosek")
+  	use.dual = (optimizer %in% c("pogs", "mosek"))
   }
   
   if (optimizer == "mosek") {
@@ -48,8 +48,11 @@ approx.balance = function(M,
     }
   } else if (optimizer == "pogs") {
     if (suppressWarnings(require("pogs", quietly = TRUE))) {
-      if (use.dual) {warning("Dual solution not yet implemented for pogs; using primal.")}
-      gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights)
+      if (use.dual) {
+      	gamma = approx.balance.pogs.dual(M, balance.target, zeta, allow.negative.weights, verbose)
+      } else {
+      	gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights, verbose)
+      }
     } else {
       warning("The POGS optimizer is not installed. Using quadprog instead.")
       optimizer = "quadprog"
@@ -126,10 +129,10 @@ approx.balance.mosek.dual = function(M,
 	}
 
 	# The dual problem is then
-	# Minimize 1/2 lambda A' diag(1/qvec) A lambda + b * lambda
+	# Minimize 1/2 lambda A diag(1/qvec) A' lambda + b * lambda
 	# Subject to lambda >= 0 for the lambdas corresponding to inequality constraints
 	#
-	# For computational purposes, we introduce additional variables mu = diag(1/sqrt(qvec)) A lambda;
+	# For computational purposes, we introduce additional variables mu = diag(1/sqrt(qvec)) A' lambda;
 	# this adds extra linear constraints, but the objective is now 1/2 ||mu||_2^2.
 	#
 	# The solution to the optimization problem is (lambda, mu)
@@ -226,7 +229,8 @@ approx.balance.mosek = function(M,
 approx.balance.pogs = function(M,
                                balance.target,
                                zeta = 0.5,
-                               allow.negative.weights = FALSE) {
+                               allow.negative.weights = FALSE,
+                               verbose = FALSE) {
   
   # Our original problem is the following:
   #
@@ -266,8 +270,60 @@ approx.balance.pogs = function(M,
 	}
 
   
-  pogs.solution = pogs(A, f, g, params = list(rel_tol=1e-4, abs_tol=1e-5))
+  pogs.solution = pogs(A, f, g, params = list(rel_tol=1e-4, abs_tol=1e-5, verbose=2*as.numeric(verbose)))
   
   gamma = pogs.solution$x[1:nrow(M)]
   gamma
+}
+
+# Find approximately balancing weights using pogs
+approx.balance.pogs.dual = function(M,
+                               balance.target,
+                               zeta = 0.5,
+                               allow.negative.weights = FALSE,
+                               verbose = FALSE) {
+  
+ 	# The primal problem is:
+	# Minimize 1/2 x' diag(qvec) x
+	# subject to Ax <= b,
+	# where the constraints indexted by "equality" are required to be equalities
+	# 
+	# Here, the vector x is interpreted as (max.imbalance, gamma)
+	qvec.primal = 2 * c(zeta, rep(1 - zeta, nrow(M)))
+	A.primal = rbind(
+	  	c(0, rep(1, nrow(M))),
+		cbind(rep(-1, ncol(M)), t(M) ),
+		cbind(rep(-1, ncol(M)), -t(M)))
+	b.primal = c(1, balance.target, -balance.target)
+	equality.primal = c(TRUE, rep(FALSE, 2*ncol(M)))
+
+	if (!allow.negative.weights) {
+		A.primal = rbind(A.primal, cbind(0, diag(-1, nrow(M), nrow(M))))
+		b.primal = c(b.primal, rep(0, nrow(M)))
+		equality.primal = c(equality.primal, rep(FALSE, nrow(M)))
+	}
+
+	# The dual problem is then
+	# Minimize 1/2 lambda A diag(1/qvec) A' lambda + b * lambda
+	# Subject to lambda >= 0 for the lambdas corresponding to inequality constraint
+	#
+	# This is equivalent to
+	# Minimize 1/2 ||c||_2^2 + d
+	# Subject to c = diag(1/sqrt(qvec)) A' lambda
+	#  d = b * lambda
+	#  lambda >= 0
+
+	A.pogs = rbind(diag(1/sqrt(qvec.primal)) %*% t(A.primal), b.primal)
+	f.pogs = list(h = c(kSquare(ncol(A.primal)), kIdentity(1)))
+	g.pogs = list(h = kIndGe0(length(equality.primal)))
+	g.pogs$h[equality.primal] = kZero(sum(equality.primal))
+
+  
+  	pogs.solution = pogs(A.pogs, f.pogs, g.pogs, params = list(rel_tol=1e-6, abs_tol=1e-7, verbose=2*as.numeric(verbose)))
+  
+  	primal = -diag(1/sqrt(qvec.primal)) %*% t(A.primal) %*% pogs.solution$x
+	delta = primal[1]
+	gamma = primal[1 + 1:nrow(M)]
+
+	gamma / sum(gamma)
 }
