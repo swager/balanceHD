@@ -20,12 +20,13 @@ residualBalance.mean = function(XW, YW,
 		fit.method = c("elnet", "none"),
 		alpha,
 		optimizer = c("mosek", "pogs", "quadprog"),
+		use.dual = TRUE,
 		verbose = FALSE) {
 	
 	fit.method = match.arg(fit.method)
 	optimizer = match.arg(optimizer)
 	
-	gamma = approx.balance(XW, balance.target, zeta = zeta, allow.negative.weights = allow.negative.weights, optimizer = optimizer, verbose=verbose)
+	gamma = approx.balance(XW, balance.target, zeta = zeta, allow.negative.weights = allow.negative.weights, optimizer = optimizer, use.dual = use.dual, verbose=verbose)
 	
 	if (fit.method == "elnet") {
 		
@@ -97,6 +98,7 @@ residualBalance.ate = function(X, Y, W,
 		scale.X = TRUE,
 		estimate.se = FALSE,
 		optimizer = c("mosek", "pogs", "quadprog"),
+		use.dual = TRUE,
 		verbose = FALSE) {
 	
 	fit.method = match.arg(fit.method)
@@ -122,18 +124,18 @@ residualBalance.ate = function(X, Y, W,
 	
 	if (setequal(target.pop, c(0, 1))) {
 		
-		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, verbose=verbose)
-		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, verbose=verbose)
+		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, use.dual = use.dual, verbose=verbose)
+		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, use.dual = use.dual, verbose=verbose)
 		
 	} else if (setequal(target.pop, c(1))) {
 		
-		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, verbose=verbose)
+		est0 = residualBalance.mean(X.scl[W==0,], Y[W==0], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, use.dual = use.dual, verbose=verbose)
 		est1 = c(mean(Y[W==1]), residualBalance.estimate.var(X[W==1,], Y[W==1], alpha, estimate.se))
 		
 	} else if (setequal(target.pop, c(0))) {
 		
 		est0 = c(mean(Y[W==0]), residualBalance.estimate.var(X[W==0,], Y[W==0], alpha, estimate.se))
-		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, verbose=verbose)
+		est1 = residualBalance.mean(X.scl[W==1,], Y[W==1], balance.target, allow.negative.weights, zeta, fit.method, alpha, optimizer=optimizer, use.dual = use.dual, verbose=verbose)
 		
 	} else {
 		
