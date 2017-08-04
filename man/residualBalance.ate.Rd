@@ -7,7 +7,8 @@
 residualBalance.ate(X, Y, W, target.pop = c(0, 1),
   allow.negative.weights = FALSE, zeta = 0.5, fit.method = c("elnet",
   "none"), alpha = 0.9, scale.X = TRUE, estimate.se = FALSE,
-  optimizer = c("mosek", "pogs", "quadprog"), verbose = FALSE)
+  optimizer = c("mosek", "pogs", "quadprog"), use.dual = NULL,
+  verbose = FALSE)
 }
 \arguments{
 \item{X}{the input features}
@@ -34,6 +35,8 @@ residualBalance.ate(X, Y, W, target.pop = c(0, 1),
 \item{estimate.se}{whether to return estimate of standard error}
 
 \item{optimizer}{which optimizer to use for approximate balancing}
+
+\item{use.dual}{whether balancing should be solved in dual form}
 
 \item{verbose}{whether the optimizer should print progress information}
 }

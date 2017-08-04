@@ -8,6 +8,7 @@
 #' @param fit.method the method used to fit mu(x) = E[YW | XW = x]
 #' @param alpha tuning paramter for glmnet
 #' @param optimizer which optimizer to use for approximate balancing
+#' @param use.dual whether balancing should be solved in dual form
 #' @param verbose whether the optimizer should print progress information
 #'
 #' @return Estimate for E[YW | XW = balance.target], along with variance estimate
@@ -20,11 +21,14 @@ residualBalance.mean = function(XW, YW,
 		fit.method = c("elnet", "none"),
 		alpha,
 		optimizer = c("mosek", "pogs", "quadprog"),
-		use.dual = TRUE,
+		use.dual = NULL,
 		verbose = FALSE) {
 	
 	fit.method = match.arg(fit.method)
 	optimizer = match.arg(optimizer)
+	if(is.null(use.dual)) {
+	  use.dual = (optimizer == "mosek")
+	}
 	
 	gamma = approx.balance(XW, balance.target, zeta = zeta, allow.negative.weights = allow.negative.weights, optimizer = optimizer, use.dual = use.dual, verbose=verbose)
 	
@@ -84,6 +88,7 @@ residualBalance.estimate.var = function(XW, YW, alpha, estimate.se) {
 #' @param scale.X whether non-binary features should be noramlized
 #' @param estimate.se whether to return estimate of standard error
 #' @param optimizer which optimizer to use for approximate balancing
+#' @param use.dual whether balancing should be solved in dual form
 #' @param verbose whether the optimizer should print progress information
 #'
 #' @return ATE estimate, along with (optional) standard error estimate
@@ -98,11 +103,14 @@ residualBalance.ate = function(X, Y, W,
 		scale.X = TRUE,
 		estimate.se = FALSE,
 		optimizer = c("mosek", "pogs", "quadprog"),
-		use.dual = TRUE,
+		use.dual = NULL,
 		verbose = FALSE) {
 	
 	fit.method = match.arg(fit.method)
 	optimizer = match.arg(optimizer)
+	if(is.null(use.dual)) {
+	  use.dual = (optimizer == "mosek")
+	}
 	
 	if (estimate.se & fit.method == "none") {
 		warning("Cannot estimate standard error with fit.method = none. Forcing estimate.se to FALSE.")

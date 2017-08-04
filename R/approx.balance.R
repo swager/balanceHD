@@ -12,6 +12,7 @@
 #'                  Pogs runs ADMM and may be useful for large problems, and
 #'                  must be installed separately. Quadprog is the default
 #'                  R solver.
+#' @param use.dual whether balancing should be solved in dual form
 #' @param verbose whether the optimizer should print progress information
 #'
 #' @return gamma, the minimizer of (*)
@@ -22,7 +23,7 @@ approx.balance = function(M,
                           zeta = 0.5,
                           allow.negative.weights = FALSE,
                           optimizer = c("mosek", "pogs", "quadprog"),
-                          use.dual = TRUE,
+                          use.dual = NULL,
                           verbose = FALSE) {
 	
 	if (zeta <= 0 || zeta >= 1) {
@@ -30,6 +31,9 @@ approx.balance = function(M,
 	}
   
   optimizer = match.arg(optimizer)
+  if(is.null(use.dual)) {
+  	use.dual = (optimizer == "mosek")
+  }
   
   if (optimizer == "mosek") {
     if (suppressWarnings(require("Rmosek", quietly = TRUE))) {
@@ -44,6 +48,7 @@ approx.balance = function(M,
     }
   } else if (optimizer == "pogs") {
     if (suppressWarnings(require("pogs", quietly = TRUE))) {
+      if (use.dual) {warning("Dual solution not yet implemented for pogs; using primal.")}
       gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights)
     } else {
       warning("The POGS optimizer is not installed. Using quadprog instead.")
@@ -52,6 +57,7 @@ approx.balance = function(M,
   }
   
   if (optimizer == "quadprog") {
+  	if (use.dual) {warning("Dual solution not yet implemented for quadprog; using primal.")}
     gamma = approx.balance.quadprog(M, balance.target, zeta, allow.negative.weights)
   }
   
@@ -92,13 +98,19 @@ approx.balance.quadprog = function(M,
         gamma
 }
 
-# Find approximately balancing weights using mosek
+# Find approximately balancing weights using mosek, using dual of QP
 approx.balance.mosek.dual = function(M,
                                 balance.target,
                                 zeta = 0.5,
                                 allow.negative.weights = FALSE,
                                 verbose = FALSE) {
 
+	# The primal problem is:
+	# Minimize 1/2 x' diag(qvec) x
+	# subject to Ax <= b,
+	# where the constraints indexted by "equality" are required to be equalities
+	# 
+	# Here, the vector x is interpreted as (max.imbalance, gamma)
 	qvec.primal = 2 * c(zeta, rep(1 - zeta, nrow(M)))
 	A.primal = rbind(
 	  	c(0, rep(1, nrow(M))),
@@ -113,23 +125,33 @@ approx.balance.mosek.dual = function(M,
 		equality.primal = c(equality.primal, rep(FALSE, nrow(M)))
 	}
 
-	Q.dual = A.primal %*% diag(1/qvec.primal) %*% t(A.primal)
-	c.dual = b.primal
-	blx.dual = rep(0, length(equality.primal))
-	blx.dual[equality.primal] = -Inf
+	# The dual problem is then
+	# Minimize 1/2 lambda A' diag(1/qvec) A lambda + b * lambda
+	# Subject to lambda >= 0 for the lambdas corresponding to inequality constraints
+	#
+	# For computational purposes, we introduce additional variables mu = diag(1/sqrt(qvec)) A lambda;
+	# this adds extra linear constraints, but the objective is now 1/2 ||mu||_2^2.
+	#
+	# The solution to the optimization problem is (lambda, mu)
+	nvar = length(qvec.primal)
+	A.dual = Matrix::Matrix(cbind(diag(1/sqrt(qvec.primal)) %*% t(A.primal), diag(-1, nvar, nvar)))
+	A.dual = as(A.dual, "CsparseMatrix")
+	blc.dual = rep(0, nvar)
+	buc.dual = rep(0, nvar)
+
+	blx.dual = c(rep(0, length(equality.primal)), rep(-Inf, nvar))
+	blx.dual[which(equality.primal)] = -Inf
 	
-	Q.list.raw = data.frame(i=rep(1:nrow(Q.dual), ncol(Q.dual)),
-		j=as.numeric(t(matrix(1:nrow(Q.dual), nrow(Q.dual), ncol(Q.dual)))),
-		v=as.numeric(Q.dual))
-	Q.list = Q.list.raw[which(Q.list.raw$i >= Q.list.raw$j),]
+	Q.dual = list(i=nrow(A.primal) + 1:nvar, j=nrow(A.primal) + 1:nvar, v=rep(1, nvar))
+	c.dual = c(b.primal, rep(0, nvar))
 
 	mosek.problem <- list()
 	mosek.problem$sense <- "min"
-	mosek.problem$qobj <- Q.list
+	mosek.problem$qobj <- Q.dual
 	mosek.problem$c <- c.dual
 	mosek.problem$bx <- rbind(blx = blx.dual, bux = rep(Inf, length(blx.dual)))
-	mosek.problem$A <- Matrix(rep(0, length(c.dual)), nrow=1, byrow=TRUE, sparse=TRUE)
-	mosek.problem$bc <- rbind(blc = -Inf, buc = Inf)
+	mosek.problem$A <- A.dual
+	mosek.problem$bc <- rbind(blc = blc.dual, buc = buc.dual)
 	
 	if (verbose) {
 		mosek.out = Rmosek::mosek(mosek.problem)
@@ -137,10 +159,10 @@ approx.balance.mosek.dual = function(M,
 		mosek.out = Rmosek::mosek(mosek.problem, opts=list(verbose=0))
 	}
 	
-	primal = -diag(1/qvec.primal) %*% t(A.primal) %*% mosek.out$sol$itr$xx
+	primal = -diag(1/qvec.primal) %*% t(A.primal) %*% mosek.out$sol$itr$xx[1:nrow(A.primal)]
 	delta = primal[1]
 	gamma = primal[1 + 1:nrow(M)]
-	gamma
+	gamma / sum(gamma)
 }
 
 # Find approximately balancing weights using mosek
