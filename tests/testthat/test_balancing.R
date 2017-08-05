@@ -35,7 +35,7 @@ imbalance.qp.free = t(M) %*% gamma.qp.free - balance.target
 
 test_that("positivity constraint works", {
   expect_true(all(gamma.mosek.positive >0))
-  expect_true(all(gamma.mosek.positive2 > -10^(-8)))
+  expect_true(all(gamma.mosek.positive2 > -10^(-6)))
   expect_true(all(gamma.pogs.positive > -10^(-3)))
   expect_true(all(gamma.pogs.positive2 > -10^(-3)))
   expect_true(all(gamma.qp.positive > 0))

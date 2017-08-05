@@ -8,7 +8,7 @@ library(devtools)
 install_github("swager/balanceHD")
 ```
 
-This package currently works with three optimizers: `pogs`, `quadprog` and `mosek`. `quadprog` is a standard `R` optimization library, and is available directly from CRAN. `pogs` is a more experimental optimizer, based on ADMM, that needs to be installed separately; see [this page](https://github.com/foges/pogs/blob/master/src/interface_r/README.md) for instructions. `mosek` is a commercial solver. For large problems we recommend using `pogs`; for smaller programs, `quadprog` is more accurate. In cases where performance matters, it may be helpful to try all 3 optimizers, and also toggle the `use.dual` option.
+This package currently works with three optimizers: `pogs`, `quadprog` and `mosek`. `quadprog` is a standard `R` optimization library, and is available directly from CRAN. `pogs` is a more experimental optimizer, based on ADMM, that needs to be installed separately; see [this page](https://github.com/foges/pogs/blob/master/src/interface_r/README.md) for instructions. `mosek` is a commercial solver that is default when available. For large problems we recommend using `pogs`; for smaller programs, `quadprog` is more accurate. In cases where performance matters, it may be helpful to try all 3 optimizers, and also toggle the `use.dual` option.
 
 Example usage:
 

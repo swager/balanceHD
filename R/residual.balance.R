@@ -20,7 +20,7 @@ residualBalance.mean = function(XW, YW,
 		zeta,
 		fit.method = c("elnet", "none"),
 		alpha,
-		optimizer = c("pogs", "quadprog", "mosek"),
+		optimizer = c("mosek", "pogs", "quadprog"),
 		use.dual = NULL,
 		verbose = FALSE) {
 	
@@ -102,7 +102,7 @@ residualBalance.ate = function(X, Y, W,
 		alpha=0.9,
 		scale.X = TRUE,
 		estimate.se = FALSE,
-		optimizer = c("pogs", "quadprog", "mosek"),
+		optimizer = c("mosek", "pogs", "quadprog"),
 		use.dual = NULL,
 		verbose = FALSE) {
 	

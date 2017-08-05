@@ -22,7 +22,7 @@ approx.balance = function(M,
                           balance.target,
                           zeta = 0.5,
                           allow.negative.weights = FALSE,
-                          optimizer = c("pogs", "quadprog", "mosek"),
+                          optimizer = c("mosek", "pogs", "quadprog"),
                           use.dual = NULL,
                           verbose = FALSE) {
 	
@@ -119,53 +119,62 @@ approx.balance.mosek.dual = function(M,
 	  	c(0, rep(1, nrow(M))),
 		cbind(rep(-1, ncol(M)), t(M) ),
 		cbind(rep(-1, ncol(M)), -t(M)))
-	b.primal = c(1, balance.target, -balance.target)
+	bvec = c(1, balance.target, -balance.target)
 	equality.primal = c(TRUE, rep(FALSE, 2*ncol(M)))
 
 	if (!allow.negative.weights) {
 		A.primal = rbind(A.primal, cbind(0, diag(-1, nrow(M), nrow(M))))
-		b.primal = c(b.primal, rep(0, nrow(M)))
+		bvec = c(bvec, rep(0, nrow(M)))
 		equality.primal = c(equality.primal, rep(FALSE, nrow(M)))
 	}
 
 	# The dual problem is then
 	# Minimize 1/2 lambda A diag(1/qvec) A' lambda + b * lambda
 	# Subject to lambda >= 0 for the lambdas corresponding to inequality constraints
-	#
-	# For computational purposes, we introduce additional variables mu = diag(1/sqrt(qvec)) A' lambda;
-	# this adds extra linear constraints, but the objective is now 1/2 ||mu||_2^2.
-	#
-	# The solution to the optimization problem is (lambda, mu)
 	nvar = length(qvec.primal)
-	A.dual = Matrix::Matrix(cbind(diag(1/sqrt(qvec.primal)) %*% t(A.primal), diag(-1, nvar, nvar)))
-	A.dual = as(A.dual, "CsparseMatrix")
-	blc.dual = rep(0, nvar)
-	buc.dual = rep(0, nvar)
+	#A.dual = diag(1/sqrt(qvec.primal)) %*% t(A.primal)
+	A.dual = 1/sqrt(qvec.primal) * t(A.primal) #this is the same thing, but faster
 
-	blx.dual = c(rep(0, length(equality.primal)), rep(-Inf, nvar))
-	blx.dual[which(equality.primal)] = -Inf
-	
-	Q.dual = list(i=nrow(A.primal) + 1:nvar, j=nrow(A.primal) + 1:nvar, v=rep(1, nvar))
-	c.dual = c(b.primal, rep(0, nvar))
+	# Next we turn this into a conic program:
+	# Minimize t
+	# Subject to bvec * lambda + q - t = 0
+	#	A.dual * lambda - mu = 0
+	#	lambda >= 0 (for the inequality constraints)
+	#	2 * q >= ||mu||_2^2
+	# Where we note that the last constraint is a rotated cone.
+	#
+	# Below, the solution vector is (lambda, mu, q, t, ONE), where ONE
+	# is just a variable constrained to be 1.
+
+	A.conic = rbind(c(bvec, rep(0, nvar), 1, -1, 0),
+		cbind(A.dual, diag(-1, nvar, nvar), 0, 0, 0),
+		c(rep(0, length(bvec) + nvar + 2), 1))
+	rhs.conic = c(rep(0, 1 + nvar), 1)
+
+	blx.conic = rep(-Inf, ncol(A.conic))
+	blx.conic[which(!equality.primal)] = 0
+	bux.conic = rep(Inf, ncol(A.conic))
+
+	obj.conic = c(rep(0, length(bvec) + nvar + 1), 1, 0)
 
 	mosek.problem <- list()
 	mosek.problem$sense <- "min"
-	mosek.problem$qobj <- Q.dual
-	mosek.problem$c <- c.dual
-	mosek.problem$bx <- rbind(blx = blx.dual, bux = rep(Inf, length(blx.dual)))
-	mosek.problem$A <- A.dual
-	mosek.problem$bc <- rbind(blc = blc.dual, buc = buc.dual)
-	
+	mosek.problem$c <- obj.conic
+	mosek.problem$bx <- rbind(blx = blx.conic, bux = bux.conic)
+	mosek.problem$A <- as(A.conic, "CsparseMatrix")
+	mosek.problem$bc <- rbind(blc = rhs.conic, buc = rhs.conic)
+	mosek.problem$cones <- cbind(list("RQUAD", c(length(bvec) + nvar + 1, length(bvec) + nvar + 3, length(bvec) + 1:nvar)))
+
 	if (verbose) {
 		mosek.out = Rmosek::mosek(mosek.problem)
 	} else {
 		mosek.out = Rmosek::mosek(mosek.problem, opts=list(verbose=0))
 	}
-	
-	primal = -diag(1/qvec.primal) %*% t(A.primal) %*% mosek.out$sol$itr$xx[1:nrow(A.primal)]
+
+	primal = -1/qvec.primal * (t(A.primal) %*% mosek.out$sol$itr$xx[1:nrow(A.primal)])
 	delta = primal[1]
 	gamma = primal[1 + 1:nrow(M)]
-	gamma / sum(gamma)
+	gamma
 }
 
 # Find approximately balancing weights using mosek
