@@ -8,7 +8,7 @@ residualBalance.ate(X, Y, W, target.pop = c(0, 1),
   allow.negative.weights = FALSE, zeta = 0.5, fit.method = c("elnet",
   "none"), alpha = 0.9, scale.X = TRUE, estimate.se = FALSE,
   optimizer = c("mosek", "pogs", "quadprog"), use.dual = NULL,
-  verbose = FALSE)
+  bound.gamma = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{X}{the input features}
@@ -37,6 +37,9 @@ residualBalance.ate(X, Y, W, target.pop = c(0, 1),
 \item{optimizer}{which optimizer to use for approximate balancing}
 
 \item{use.dual}{whether balancing should be solved in dual form}
+
+\item{bound.gamma}{Whether upper bound on gamma should be imposed. This is
+required to guarantee asymptotic normality, but increases computational cost.}
 
 \item{verbose}{whether the optimizer should print progress information}
 }

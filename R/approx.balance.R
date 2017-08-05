@@ -13,6 +13,7 @@
 #'                  must be installed separately. Quadprog is the default
 #'                  R solver.
 #' @param use.dual whether balancing should be solved in dual form
+#' @param bound.gamma whether upper bound on gamma should be imposed
 #' @param verbose whether the optimizer should print progress information
 #'
 #' @return gamma, the minimizer of (*)
@@ -24,6 +25,7 @@ approx.balance = function(M,
                           allow.negative.weights = FALSE,
                           optimizer = c("mosek", "pogs", "quadprog"),
                           use.dual = NULL,
+                          bound.gamma = FALSE,
                           verbose = FALSE) {
 	
 	if (zeta <= 0 || zeta >= 1) {
@@ -38,8 +40,9 @@ approx.balance = function(M,
   if (optimizer == "mosek") {
     if (suppressWarnings(require("Rmosek", quietly = TRUE))) {
     	if (use.dual) {
-      		gamma = approx.balance.mosek.dual(M, balance.target, zeta, allow.negative.weights, verbose)
+      		gamma = approx.balance.mosek.dual(M, balance.target, zeta, allow.negative.weights, bound.gamma, verbose)
       	} else {
+      		if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
       		gamma = approx.balance.mosek(M, balance.target, zeta, allow.negative.weights, verbose)
       	}
     } else {
@@ -49,8 +52,10 @@ approx.balance = function(M,
   } else if (optimizer == "pogs") {
     if (suppressWarnings(require("pogs", quietly = TRUE))) {
       if (use.dual) {
+      	if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
       	gamma = approx.balance.pogs.dual(M, balance.target, zeta, allow.negative.weights, verbose)
       } else {
+      	if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
       	gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights, verbose)
       }
     } else {
@@ -61,6 +66,7 @@ approx.balance = function(M,
   
   if (optimizer == "quadprog") {
   	if (use.dual) {warning("Dual solution not yet implemented for quadprog; using primal.")}
+  	if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
     gamma = approx.balance.quadprog(M, balance.target, zeta, allow.negative.weights)
   }
   
@@ -106,6 +112,7 @@ approx.balance.mosek.dual = function(M,
                                 balance.target,
                                 zeta = 0.5,
                                 allow.negative.weights = FALSE,
+                                bound.gamma = FALSE,
                                 verbose = FALSE) {
 
 	# The primal problem is:
@@ -125,6 +132,13 @@ approx.balance.mosek.dual = function(M,
 	if (!allow.negative.weights) {
 		A.primal = rbind(A.primal, cbind(0, diag(-1, nrow(M), nrow(M))))
 		bvec = c(bvec, rep(0, nrow(M)))
+		equality.primal = c(equality.primal, rep(FALSE, nrow(M)))
+	}
+
+	if (bound.gamma) {
+		gamma.max = 1/nrow(M)^(2/3)
+		A.primal = rbind(A.primal, cbind(0, diag(1, nrow(M), nrow(M))))
+		bvec = c(bvec, rep(gamma.max, nrow(M)))
 		equality.primal = c(equality.primal, rep(FALSE, nrow(M)))
 	}
 

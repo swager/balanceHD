@@ -6,7 +6,7 @@
 \usage{
 approx.balance(M, balance.target, zeta = 0.5,
   allow.negative.weights = FALSE, optimizer = c("mosek", "pogs",
-  "quadprog"), use.dual = NULL, verbose = FALSE)
+  "quadprog"), use.dual = NULL, bound.gamma = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{M}{the feature matrix, see (*)}
@@ -24,6 +24,8 @@ must be installed separately. Quadprog is the default
 R solver.}
 
 \item{use.dual}{whether balancing should be solved in dual form}
+
+\item{bound.gamma}{whether upper bound on gamma should be imposed}
 
 \item{verbose}{whether the optimizer should print progress information}
 }
