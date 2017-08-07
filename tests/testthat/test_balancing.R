@@ -3,16 +3,16 @@ p = 700
 M = matrix(rnorm(n*p), n, p)
 balance.target = c(1, rep(0, p - 1))
 
-gamma.mosek.positive = approx.balance(M, balance.target = balance.target, optimizer = "mosek", allow.negative.weights = FALSE, zeta = 0.5)
+gamma.mosek.positive = approx.balance(M, balance.target = balance.target, optimizer = "mosek", allow.negative.weights = FALSE, zeta = 0.5, bound.gamma = TRUE)
 imbalance.mosek.positive = t(M) %*% gamma.mosek.positive - balance.target
 
-gamma.mosek.free = approx.balance(M, balance.target = balance.target, optimizer = "mosek", allow.negative.weights = TRUE, zeta = 0.5)
+gamma.mosek.free = approx.balance(M, balance.target = balance.target, optimizer = "mosek", allow.negative.weights = TRUE, zeta = 0.5, bound.gamma = TRUE)
 imbalance.mosek.free = t(M) %*% gamma.mosek.free - balance.target
 
-gamma.pogs.positive = approx.balance(M, balance.target = balance.target, optimizer = "pogs", allow.negative.weights = FALSE, zeta = 0.5)
+gamma.pogs.positive = approx.balance(M, balance.target = balance.target, optimizer = "pogs", allow.negative.weights = FALSE, zeta = 0.5, bound.gamma = TRUE)
 imbalance.pogs.positive = t(M) %*% gamma.pogs.positive - balance.target
 
-gamma.pogs.free = approx.balance(M, balance.target = balance.target, optimizer = "pogs", allow.negative.weights = TRUE, zeta = 0.5)
+gamma.pogs.free = approx.balance(M, balance.target = balance.target, optimizer = "pogs", allow.negative.weights = TRUE, zeta = 0.5, bound.gamma = TRUE)
 imbalance.pogs.free = t(M) %*% gamma.pogs.free - balance.target
 
 gamma.pogs.positive2 = approx.balance(M, balance.target = balance.target, optimizer = "pogs.dual", allow.negative.weights = FALSE, zeta = 0.5)

@@ -31,7 +31,7 @@ approx.balance = function(M,
   }
   
   optimizer = match.arg(optimizer)
-
+  
   if (optimizer == "mosek") {
     if (suppressWarnings(require("Rmosek", quietly = TRUE))) {
       gamma = approx.balance.mosek.dual(M, balance.target, zeta, allow.negative.weights, bound.gamma, verbose)
@@ -49,8 +49,7 @@ approx.balance = function(M,
   if (optimizer %in% c("pogs", "pogs.dual")) {
     if (suppressWarnings(require("pogs", quietly = TRUE))) {
       if (optimizer == "pogs") {
-        if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
-        gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights, verbose)
+        gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights, bound.gamma, verbose)
       } else {
         if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
         gamma = approx.balance.pogs.dual(M, balance.target, zeta, allow.negative.weights, verbose)
@@ -193,12 +192,13 @@ approx.balance.pogs = function(M,
                                balance.target,
                                zeta = 0.5,
                                allow.negative.weights = FALSE,
+                               bound.gamma = FALSE,
                                verbose = FALSE) {
   
   # Our original problem is the following:
   #
   # Minimize ||gamma||_2^2 + delta^2 / lambda^2, subject to
-  # ||M'gamma - balance.target||_infty <= delta and sum gamma_i = 0.
+  # ||M'gamma - balance.target||_infty <= delta and sum gamma_i = 1.
   #
   # Equivalently, in notation recognized by POGS, we can write
   #
@@ -215,23 +215,25 @@ approx.balance.pogs = function(M,
   lambda = sqrt((1 - zeta) / zeta)
   g = list(h = kSquare())
   
-  if (allow.negative.weights) {
-    f = list(h = c(kIndLe0(2 * ncol(M)), kIndEq0(2)),
-             b = c(rep(0, 2 * ncol(M)), 1, 1))
-    A = rbind(cbind(t(M), -balance.target, -lambda),
-              cbind(-t(M), balance.target, -lambda),
-              c(rep(1, nrow(M)), 0, 0),
-              c(rep(0, nrow(M)), 1, 0))
-  } else {
-    f = list(h = c(kIndLe0(2 * ncol(M) + nrow(M)), kIndEq0(2)),
-             b = c(rep(0, 2 * ncol(M) + nrow(M)), 1, 1))
-    A = rbind(cbind(t(M), -balance.target, -lambda),
-              cbind(-t(M), balance.target, -lambda),
-              cbind(diag(-1, nrow(M)), 0, 0),
-              c(rep(1, nrow(M)), 0, 0),
-              c(rep(0, nrow(M)), 1, 0))
+  f = list(h = c(kIndLe0(2 * ncol(M)), kIndEq0(2)),
+           b = c(rep(0, 2 * ncol(M)), 1, 1))
+  A = rbind(cbind(t(M), -balance.target, -lambda),
+            cbind(-t(M), balance.target, -lambda),
+            c(rep(1, nrow(M)), 0, 0),
+            c(rep(0, nrow(M)), 1, 0))
+  
+  if (!allow.negative.weights) {
+    f$h = c(f$h, kIndLe0(nrow(M)))
+    f$b = c(f$b, rep(0, nrow(M)))
+    A = rbind(A, cbind(diag(-1, nrow(M)), 0, 0))
   }
   
+  if (bound.gamma) {
+    gamma.max = 1/nrow(M)^(2/3)
+    f$h = c(f$h, kIndLe0(nrow(M)))
+    f$b = c(f$b, rep(gamma.max, nrow(M)))
+    A = rbind(A, cbind(diag(1, nrow(M)), 0, 0))
+  }
   
   pogs.solution = pogs(A, f, g, params = list(rel_tol=1e-4, abs_tol=1e-5, verbose=2*as.numeric(verbose)))
   
