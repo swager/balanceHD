@@ -117,32 +117,50 @@ approx.balance.mosek.dual = function(M,
   # 
   # Here, the vector x is interpreted as (max.imbalance, gamma)
   qvec.primal = 2 * c(zeta, rep(1 - zeta, nrow(M)))
-  A.primal = rbind(
-    c(0, rep(1, nrow(M))),
-    cbind(rep(-1, ncol(M)), t(M) ),
-    cbind(rep(-1, ncol(M)), -t(M)))
-  bvec = c(1, balance.target, -balance.target)
-  equality.primal = c(TRUE, rep(FALSE, 2*ncol(M)))
   
-  if (!allow.negative.weights) {
-    A.primal = rbind(A.primal, cbind(0, diag(-1, nrow(M), nrow(M))))
-    bvec = c(bvec, rep(0, nrow(M)))
-    equality.primal = c(equality.primal, rep(FALSE, nrow(M)))
-  }
+  tM = Matrix::t(M)
+  nvar = length(qvec.primal)
   
-  if (bound.gamma) {
-    gamma.max = 1/nrow(M)^(2/3)
-    A.primal = rbind(A.primal, cbind(0, diag(1, nrow(M), nrow(M))))
-    bvec = c(bvec, rep(gamma.max, nrow(M)))
-    equality.primal = c(equality.primal, rep(FALSE, nrow(M)))
-  }
+  A.primal.list = list(
+    Matrix::Matrix(c(0, rep(1, nrow(M))), 1, nvar),
+    Matrix::cBind(rep(-1, ncol(M)), tM),
+    Matrix::cBind(rep(-1, ncol(M)), -tM),
+    if(!allow.negative.weights) {
+      Matrix::cBind(0, Matrix::diag(-1, nrow(M), nrow(M)))
+    } else {
+      numeric()
+    },
+    if(bound.gamma) {
+      Matrix::cBind(0, Matrix::diag(1, nrow(M), nrow(M)))
+    } else {
+      numeric()
+    }
+  )
+  A.primal = plyr::rbind.fill.matrix(A.primal.list)
+  
+  gamma.max = 1/nrow(M)^(2/3)
+  bvec = c(1,
+           balance.target,
+           -balance.target,
+           if(!allow.negative.weights) {
+             rep(0, nrow(M))
+           } else {
+             numeric()
+           },
+           if (bound.gamma) {
+             rep(gamma.max, nrow(M))
+           } else {
+             numeric()
+           })
+  
+  equality.primal = c(TRUE, rep(FALSE, 2*ncol(M) + (as.numeric(!allow.negative.weights) + as.numeric(bound.gamma)) * nrow(M)))
   
   # The dual problem is then
   # Minimize 1/2 lambda A diag(1/qvec) A' lambda + b * lambda
   # Subject to lambda >= 0 for the lambdas corresponding to inequality constraints
-  nvar = length(qvec.primal)
+
   #A.dual = diag(1/sqrt(qvec.primal)) %*% t(A.primal)
-  A.dual = 1/sqrt(qvec.primal) * t(A.primal) #this is the same thing, but faster
+  A.dual = 1/sqrt(qvec.primal) * Matrix::t(A.primal) #this is the same thing, but faster
   
   # Next we turn this into a conic program:
   # Minimize t
@@ -155,9 +173,9 @@ approx.balance.mosek.dual = function(M,
   # Below, the solution vector is (lambda, mu, q, t, ONE), where ONE
   # is just a variable constrained to be 1.
   
-  A.conic = rbind(c(bvec, rep(0, nvar), 1, -1, 0),
-                  cbind(A.dual, diag(-1, nvar, nvar), 0, 0, 0),
-                  c(rep(0, length(bvec) + nvar + 2), 1))
+  A.conic = Matrix::rBind(c(bvec, rep(0, nvar), 1, -1, 0),
+                          Matrix::cBind(A.dual, Matrix::diag(-1, nvar, nvar), 0, 0, 0),
+                          c(rep(0, length(bvec) + nvar + 2), 1))
   rhs.conic = c(rep(0, 1 + nvar), 1)
   
   blx.conic = rep(-Inf, ncol(A.conic))
