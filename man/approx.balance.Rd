@@ -6,7 +6,7 @@
 \usage{
 approx.balance(M, balance.target, zeta = 0.5,
   allow.negative.weights = FALSE, optimizer = c("mosek", "pogs",
-  "quadprog"), use.dual = NULL, bound.gamma = FALSE, verbose = FALSE)
+  "pogs.dual", "quadprog"), bound.gamma = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{M}{the feature matrix, see (*)}
@@ -22,8 +22,6 @@ academic licenses are available. Needs to be installed separately.
 Pogs runs ADMM and may be useful for large problems, and
 must be installed separately. Quadprog is the default
 R solver.}
-
-\item{use.dual}{whether balancing should be solved in dual form}
 
 \item{bound.gamma}{whether upper bound on gamma should be imposed}
 

@@ -8,7 +8,27 @@ library(devtools)
 install_github("swager/balanceHD")
 ```
 
-This package currently works with three optimizers: `pogs`, `quadprog` and `mosek`. `quadprog` is a standard `R` optimization library, and is available directly from CRAN. `pogs` is a more experimental optimizer, based on ADMM, that needs to be installed separately; see [this page](https://github.com/foges/pogs/blob/master/src/interface_r/README.md) for instructions. `mosek` is a commercial solver that is default when available. For large problems we recommend using `pogs`; for smaller programs, `quadprog` is more accurate. In cases where performance matters, it may be helpful to try all 3 optimizers, and also toggle the `use.dual` option.
+This package currently works with three optimizers: `pogs`, `quadprog` and `mosek`.
+Mosek is a commercial interior point solver,
+pogs is a first-order optimizer, based on ADMM, while
+quadprog is a standard `R` optimization library.
+In general, we achieved best performance with mosek, and
+recommend trying optimizers in the order listed above.
+We found pogs to be somewhat slower than mosek on the problems
+we tried. (Note that we offer two solution strategies based on pogs: `pogs` and
+`pogs.dual`. We usually recommend the former, except when p is much larger than n.)
+Finally, quadprog performors well on small problems, but can be much
+slower for larger problems.
+
+In terms of availability, the optimizer quadprog is easiest to access,
+and is available directly from CRAN. Pogs needs to be installed separately,
+but is still free. To install pogs, simply install one of the pre-compiled
+binaries available from the project [repository](https://github.com/foges/pogs);
+see [this page](https://github.com/foges/pogs/blob/master/src/interface_r/README.md)
+for furhter instructions.
+Finally, mosek is a commercial solver; however, academic
+[licenses](https://www.mosek.com/resources/academic-license) are available for free.
+One mosek has been installed, we call into it using the R package Rmosek.
 
 Example usage:
 
@@ -36,6 +56,6 @@ print(paste0("95% CI for tau: (", round(tau.hat[1] - 1.96 * tau.hat[2], 2), ", "
 
 #### References
 Susan Athey, Guido Imbens, and Stefan Wager.
-<b>Efficient Inference of Average Treatment Effects in High Dimensions via Approximate Residual Balancing.</b>
+<b>Approximate Residual Balancing: De-Biased Inference of Average Treatment Effects in High Dimensions.</b>
 2016.
 [<a href="http://arxiv.org/pdf/1604.07125.pdf">arxiv</a>]

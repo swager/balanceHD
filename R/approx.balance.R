@@ -12,7 +12,6 @@
 #'                  Pogs runs ADMM and may be useful for large problems, and
 #'                  must be installed separately. Quadprog is the default
 #'                  R solver.
-#' @param use.dual whether balancing should be solved in dual form
 #' @param bound.gamma whether upper bound on gamma should be imposed
 #' @param verbose whether the optimizer should print progress information
 #'
@@ -23,8 +22,7 @@ approx.balance = function(M,
                           balance.target,
                           zeta = 0.5,
                           allow.negative.weights = FALSE,
-                          optimizer = c("mosek", "pogs", "quadprog"),
-                          use.dual = NULL,
+                          optimizer = c("mosek", "pogs", "pogs.dual", "quadprog"),
                           bound.gamma = FALSE,
                           verbose = FALSE) {
   
@@ -33,30 +31,29 @@ approx.balance = function(M,
   }
   
   optimizer = match.arg(optimizer)
-  if(is.null(use.dual)) {
-    use.dual = (optimizer %in% c("mosek"))
-  }
-  
+
   if (optimizer == "mosek") {
     if (suppressWarnings(require("Rmosek", quietly = TRUE))) {
-      if (use.dual) {
-        gamma = approx.balance.mosek.dual(M, balance.target, zeta, allow.negative.weights, bound.gamma, verbose)
-      } else {
-        if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
-        gamma = approx.balance.mosek(M, balance.target, zeta, allow.negative.weights, verbose)
-      }
+      gamma = approx.balance.mosek.dual(M, balance.target, zeta, allow.negative.weights, bound.gamma, verbose)
     } else {
-      warning("The mosek optimizer is not installed. Using quadprog instead.")
-      optimizer = "quadprog"
-    }
-  } else if (optimizer == "pogs") {
-    if (suppressWarnings(require("pogs", quietly = TRUE))) {
-      if (use.dual) {
-        if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
-        gamma = approx.balance.pogs.dual(M, balance.target, zeta, allow.negative.weights, verbose)
+      if (suppressWarnings(require("pogs", quietly = TRUE))) {
+        warning("The mosek optimizer is not installed. Using pogs instead.")
+        optimizer = "pogs"
       } else {
+        warning("Neither mosek nor pogs optimizers are installed. Using quadprog instead.")
+        optimizer = "quadprog"
+      }
+    }
+  }
+  
+  if (optimizer %in% c("pogs", "pogs.dual")) {
+    if (suppressWarnings(require("pogs", quietly = TRUE))) {
+      if (optimizer == "pogs") {
         if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
         gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights, verbose)
+      } else {
+        if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
+        gamma = approx.balance.pogs.dual(M, balance.target, zeta, allow.negative.weights, verbose)
       }
     } else {
       warning("The POGS optimizer is not installed. Using quadprog instead.")
@@ -65,7 +62,6 @@ approx.balance = function(M,
   }
   
   if (optimizer == "quadprog") {
-    if (use.dual) {warning("Dual solution not yet implemented for quadprog; using primal.")}
     if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
     gamma = approx.balance.quadprog(M, balance.target, zeta, allow.negative.weights)
   }
@@ -188,63 +184,7 @@ approx.balance.mosek.dual = function(M,
   primal = -1/qvec.primal * (t(A.primal) %*% mosek.out$sol$itr$xx[1:nrow(A.primal)])
   delta = primal[1]
   gamma = primal[1 + 1:nrow(M)]
-  gamma
-}
-
-# Find approximately balancing weights using mosek
-approx.balance.mosek = function(M,
-                                balance.target,
-                                zeta = 0.5,
-                                allow.negative.weights = FALSE,
-                                verbose = FALSE) {
-  # The system is effectively
-  # minimize zeta * delta^2 + (1 - zeta) * ||gamma||^2
-  # subject to
-  #   sum gamma = 1
-  #    -Infty <= -delta + (M'gamma)_j <= balance.target_j
-  #   balance.target_j <= delta + (M'gamma)_j <= Infty
-  #   0 <= gamma <= gamma.max (lower bound is optional)
-  #
-  # The second and third constraints mean that
-  # delta = ||M'gamma - balance.target||_infty
-  Qmat = list(i = 1:(1 + nrow(M)),
-              j = 1:(1 + nrow(M)),
-              v = 2 * c(zeta, rep(1 - zeta, nrow(M))))
-  cvec = rep(0, 1 + nrow(M))
-  Amat = Matrix::Matrix(rbind(
-    c(0, rep(1, nrow(M))),
-    cbind(rep(-1, ncol(M)), t(M) ),
-    cbind(rep(+1, ncol(M)), t(M))))
-  Amat = as(Amat, "CsparseMatrix")
-  buc = c(1, balance.target,  rep(Inf, ncol(M)))
-  blc = c(1, rep(-Inf, ncol(M)), balance.target)
-  
-  gamma.max = 1/nrow(M)^(2/3)
-  bux = c(Inf, rep(gamma.max, nrow(M)))
-  
-  if (allow.negative.weights) {
-    blx = c(0, -rep(gamma.max, nrow(M)))
-  } else {
-    blx = rep(0, nrow(M) + 1)
-  }
-  
-  mosek.problem <- list()
-  mosek.problem$sense <- "min"
-  mosek.problem$qobj <- Qmat
-  mosek.problem$c <- cvec
-  mosek.problem$A <-Amat
-  mosek.problem$bc <- rbind(blc = blc, buc = buc)
-  mosek.problem$bx <- rbind(blx = blx, bux = bux)
-  
-  if (verbose) {
-    mosek.out = Rmosek::mosek(mosek.problem)
-  } else {
-    mosek.out = Rmosek::mosek(mosek.problem, opts=list(verbose=0))
-  }
-  
-  delta = mosek.out$sol$itr$xx[1]
-  gamma =  mosek.out$sol$itr$xx[1 + 1:nrow(M)]
-  gamma
+  gamma/sum(gamma)
 }
 
 
@@ -296,7 +236,7 @@ approx.balance.pogs = function(M,
   pogs.solution = pogs(A, f, g, params = list(rel_tol=1e-4, abs_tol=1e-5, verbose=2*as.numeric(verbose)))
   
   gamma = pogs.solution$x[1:nrow(M)]
-  gamma
+  gamma/sum(gamma)
 }
 
 # Find approximately balancing weights using pogs
@@ -347,6 +287,5 @@ approx.balance.pogs.dual = function(M,
   primal = -diag(1/sqrt(qvec.primal)) %*% t(A.primal) %*% pogs.solution$x
   delta = primal[1]
   gamma = primal[1 + 1:nrow(M)]
-  
   gamma / sum(gamma)
 }
