@@ -12,6 +12,7 @@
 #' @param alpha.fit tuning paramter for glmnet in the mu model
 #' @param prop.method the method used to fit e(x) = P[W = 1 | X]
 #' @param alpha.prop tuning paramter for glmnet in the propsenity model
+#' @param prop.weighted.fit whether propensity weights should be used to as sample weights in outcome fit
 #' @param targeting.method how to combine the outcome and propensity model fits.
 #'
 #' @return ATE estimate
@@ -20,6 +21,7 @@
 ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 			fit.method = c("elnet", "none"), alpha.fit = 0.9,
 			prop.method = c("elnet", "randomforest"), alpha.prop = 0.5,
+			prop.weighted.fit = FALSE,
 			targeting.method = c("AIPW", "TMLE"),
 			estimate.se=FALSE) {
 	
@@ -92,10 +94,19 @@ ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 	for (treatment.status in refit.W) {
 		
 		W.idx = which(W == treatment.status)
+		
 		if (fit.method == "elnet") {
-			fit = glmnet::cv.glmnet(X[W.idx,], Y[W.idx], alpha = alpha.fit)
+		  
+		  if (prop.weighted.fit) {
+		    sample.weights = prop.weights[W.idx] / mean(prop.weights[W.idx])
+		  } else {
+		    sample.weights = rep(1, length(W.idx))
+		  }
+		  
+			fit = glmnet::cv.glmnet(X[W.idx,], Y[W.idx], alpha = alpha.fit, weights = sample.weights)
 			predictions[W.idx] = predict(fit, newx = X[W.idx,])
 			mu.main[treatment.status + 1] = mean(predict(fit, newx = X))
+			
 		} else if (fit.method == "none") {
 			# do nothing
 		} else {

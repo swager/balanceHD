@@ -24,6 +24,7 @@ tau.ipw.l1 = ipw.ate(X, Y, W, fit.method = "none", alpha.prop = 1)
 tau.ipw.elnet = ipw.ate(X, Y, W, fit.method = "none")
 tau.ipw.rf = ipw.ate(X, Y, W, fit.method = "none", prop.method = "randomforest")
 tau.ipw.resid = ipw.ate(X, Y, W, fit.method = "elnet")
+tau.weighted = ipw.ate(X, Y, W, fit.method = "elnet", prop.weighted.fit = TRUE)
 tau.tmle = ipw.ate(X, Y, W, fit.method = "elnet", targeting.method = "TMLE")
 
 # Run other baselines
@@ -41,7 +42,8 @@ results = c(Naive=tau.naive,
 		IPW.Elnet = tau.ipw.elnet,
 		IPW.RF = tau.ipw.rf,
 		IPW.Residual = tau.ipw.resid,
-		TMLE=tau.tmle)
+		weighted = tau.weighted,
+		TMLE = tau.tmle)
 
 test_that("all methods ran", {
   expect_that( results, is_a("numeric") )
