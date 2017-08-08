@@ -77,8 +77,9 @@ ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 	prop.weights[W==1] = prop.weights[W==1] / sum(prop.weights[W==1])
 	
 	# now fit a model to the outcomes, for W in refit.W
-	
-	if (setequal(target.pop, c(0, 1))) {
+	if (estimate.se) {
+	  refit.W = c(0, 1)
+	} else if (setequal(target.pop, c(0, 1))) {
 		refit.W = c(0, 1)
 	} else if (setequal(target.pop, c(1))) {
 		refit.W = c(0)
@@ -88,8 +89,9 @@ ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 		stop("Invalid target.pop.")
 	}
 
-	predictions = rep(0, length(Y))
-	mu.main = c(0, 0)
+	target.avg = mean(Y[W %in% target.pop])
+	predictions = rep(target.avg, length(Y))
+	mu.main = c(target.avg, target.avg)
 	
 	for (treatment.status in refit.W) {
 		
@@ -108,9 +110,14 @@ ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 			mu.main[treatment.status + 1] = mean(predict(fit, newx = X))
 			
 		} else if (fit.method == "none") {
-			# do nothing
+			
+		  mu.main[treatment.status + 1] = mean(predictions[W.idx])
+		  predictions[W.idx] =mu.main[treatment.status + 1]
+		  
 		} else {
+		  
 			stop("Invalid choice for fit.method.")
+		  
 		}
 		
 	}
