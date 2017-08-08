@@ -12,6 +12,7 @@
 #' @param alpha.fit tuning paramter for glmnet in the mu model
 #' @param prop.method the method used to fit e(x) = P[W = 1 | X]
 #' @param alpha.prop tuning paramter for glmnet in the propsenity model
+#' @param targeting.method how to combine the outcome and propensity model fits.
 #'
 #' @return ATE estimate
 #'
@@ -19,10 +20,12 @@
 ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 			fit.method = c("elnet", "none"), alpha.fit = 0.9,
 			prop.method = c("elnet", "randomforest"), alpha.prop = 0.5,
+			targeting.method = c("AIPW", "TMLE"),
 			estimate.se=FALSE) {
 	
 	fit.method = match.arg(fit.method)
 	prop.method = match.arg(prop.method)
+	targeting.method = match.arg(targeting.method)
 	
 	# First compute propensity of treatment
 	if (prop.method == "elnet") {
@@ -102,17 +105,53 @@ ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 	}
 
 	residuals = Y - predictions
-	mu.residual = c(sum(prop.weights[W==0] * residuals[W==0]),
-			sum(prop.weights[W==1] * residuals[W==1]))
-				    
-	mu.full = mu.main + mu.residual
-
-	tau.hat = mu.full[2] - mu.full[1]
 	
-	if(estimate.se == FALSE) {
-		tau.hat
+	if (targeting.method == "AIPW") {
+	  
+	  mu.residual = c(sum(prop.weights[W==0] * residuals[W==0]),
+	                  sum(prop.weights[W==1] * residuals[W==1]))
+	  mu.full = mu.main + mu.residual
+	  tau.hat = mu.full[2] - mu.full[1]
+	  
+	  if(estimate.se == FALSE) {
+	    tau.hat
+	  } else {
+	    var.hat = sum(prop.weights^2 * residuals^2)
+	    c(tau.hat, sqrt(var.hat))
+	  }
+	  
+	} else if (targeting.method == "TMLE") {
+	  
+	  # Next turn this into propensity weights
+	  if (setequal(target.pop, c(0, 1))) {
+	    mean.weight.0 = mean(1/(1 - prop)) / mean(1/(1 - prop[W==0]))
+	    mean.weight.1 = mean(1/prop) / mean(1/(prop[W==1]))
+	  } else if (setequal(target.pop, c(1))) {
+	    mean.weight.0 = mean(prop/(1 - prop)) / mean(prop[W==0]/(1 - prop[W==0]))
+	    mean.weight.1 = 1
+	  } else if (setequal(target.pop, c(0))) {
+	    mean.weight.0 = 1
+	    mean.weight.1 = mean((1 - prop)/prop) / mean((1 - prop[W==1])/prop[W==1])
+	  } else {
+	    stop("Invalid target.pop.")
+	  }
+	  
+	  # targeted MLE
+	  eps.tmle.0 = lm(B ~ A + 0, data=data.frame(A=prop.weights[W==0] * sum(W==0), B=residuals[W==0]))
+	  eps.tmle.1 = lm(B ~ A + 0, data=data.frame(A=prop.weights[W==1] * sum(W==1), B=residuals[W==1]))
+	  delta.tmle.0 = predict(eps.tmle.0, newdata=data.frame(A=mean.weight.0))
+	  delta.tmle.1 = predict(eps.tmle.1, newdata=data.frame(A=mean.weight.1))
+	  tau.tmle = mu.main[2] - mu.main[1] + delta.tmle.1 - delta.tmle.0
+	  
+	  if(estimate.se == FALSE) {
+	    tau.tmle
+	  } else {
+	    sigma2.tmle = sandwich::vcovHC(eps.tmle.0) * mean.weight.0^2 +
+	      sandwich::vcovHC(eps.tmle.1) * mean.weight.1^2
+	    c(tau.tmle, sqrt(sigma2.tmle))
+	  }
+	  
 	} else {
-		var.hat = sum(prop.weights^2 * residuals^2)
-		c(tau.hat, sqrt(var.hat))
+	  stop("Invalid targeting method.")
 	}
 }

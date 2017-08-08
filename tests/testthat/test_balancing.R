@@ -59,7 +59,7 @@ test_that("gamma sums to 1", {
 test_that("optimizers match", {
   expect_equal(max(abs(gamma.qp.free - gamma.mosek.free)), 0, tolerance = 5e-4)
   expect_equal(max(abs(gamma.qp.positive - gamma.mosek.positive)), 0, tolerance = 5e-4)
-  expect_equal(max(abs(gamma.qp.free - gamma.pogs.free)), 0, tolerance = 5e-3)
+  expect_equal(max(abs(gamma.qp.free - gamma.pogs.free)), 0, tolerance = 5e-2)
   expect_equal(max(abs(gamma.qp.positive - gamma.pogs.positive)), 0, tolerance = 5e-2)
   expect_equal(max(abs(gamma.qp.free - gamma.pogs.free2)), 0, tolerance = 5e-3)
   expect_equal(max(abs(gamma.qp.positive - gamma.pogs.positive2)), 0, tolerance = 5e-2)

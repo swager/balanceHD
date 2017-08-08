@@ -7,7 +7,7 @@
 ipw.ate(X, Y, W, target.pop = c(0, 1), eps.threshold = 1/20,
   fit.method = c("elnet", "none"), alpha.fit = 0.9,
   prop.method = c("elnet", "randomforest"), alpha.prop = 0.5,
-  estimate.se = FALSE)
+  targeting.method = c("AIPW", "TMLE"), estimate.se = FALSE)
 }
 \arguments{
 \item{X}{the input features}
@@ -30,6 +30,8 @@ ipw.ate(X, Y, W, target.pop = c(0, 1), eps.threshold = 1/20,
 \item{prop.method}{the method used to fit e(x) = P[W = 1 | X]}
 
 \item{alpha.prop}{tuning paramter for glmnet in the propsenity model}
+
+\item{targeting.method}{how to combine the outcome and propensity model fits.}
 }
 \value{
 ATE estimate
