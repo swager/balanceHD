@@ -249,8 +249,8 @@ approx.balance.pogs = function(M,
   if (bound.gamma) {
     gamma.max = 1/nrow(M)^(2/3)
     f$h = c(f$h, kIndLe0(nrow(M)))
-    f$b = c(f$b, rep(gamma.max, nrow(M)))
-    A = rbind(A, cbind(diag(1, nrow(M)), 0, 0))
+    f$b = c(f$b, rep(0, nrow(M)))
+    A = rbind(A, cbind(diag(1, nrow(M)), -gamma.max, 0))
   }
   
   pogs.solution = pogs(A, f, g, params = list(rel_tol=1e-4, abs_tol=1e-5, verbose=2*as.numeric(verbose)))
