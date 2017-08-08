@@ -8,7 +8,7 @@ library(devtools)
 install_github("swager/balanceHD")
 ```
 
-This package currently works with three optimizers: `pogs`, `quadprog` and `mosek`.
+This package currently works with three optimizers: `mosek`, `pogs`, and `quadprog`.
 Mosek is a commercial interior point solver,
 pogs is a first-order optimizer, based on ADMM, while
 quadprog is a standard `R` optimization library.
