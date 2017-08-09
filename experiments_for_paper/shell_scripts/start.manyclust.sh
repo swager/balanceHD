@@ -3,13 +3,13 @@
 betavals=(1 2 3 4)
 propvals=(3)
 nvals=(800)
-pvals=(3000)
+pvals=(4000)
 epsvals=(0.1 0.25)
 cvals=(3)
 extravals=(2)
 exp=(1)
 
-reps=100
+reps=1000
 
 for ((i1=0; i1<${#betavals[@]} ;i1++))
 do
