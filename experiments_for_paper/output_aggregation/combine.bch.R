@@ -2,7 +2,7 @@ library(xtable)
 rm(list = ls())
 source("process.fnm.R")
 
-filenames = list.files("results", pattern="res-1-6-100-200-.*-1.RData", full.names=TRUE)
+filenames = list.files("results", pattern="res-1-6-.*-1.RData", full.names=TRUE)
 
 out.raw = process.fnm(filenames)
 out.raw = out.raw[order(as.numeric(as.character(out.raw$C))),]
