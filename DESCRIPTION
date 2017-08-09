@@ -6,8 +6,7 @@ Maintainer: Stefan Wager <swager@stanford.edu>
 Imports: glmnet,
     quadprog,
     sandwich,
-    Matrix,
-    plyr
+    Matrix
 Suggests: Rmosek,
     pogs,
     randomForest,

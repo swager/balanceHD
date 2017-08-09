@@ -117,14 +117,14 @@ approx.balance.mosek.dual = function(M,
   # 
   # Here, the vector x is interpreted as (max.imbalance, gamma)
   qvec.primal = 2 * c(zeta, rep(1 - zeta, nrow(M)))
-  
+
   tM = Matrix::t(M)
   nvar = length(qvec.primal)
   
   A.primal.list = list(
-    Matrix::Matrix(c(0, rep(1, nrow(M))), 1, nvar),
-    Matrix::cBind(rep(-1, ncol(M)), tM),
-    Matrix::cBind(rep(-1, ncol(M)), -tM),
+    matrix(c(0, rep(1, nrow(M))), 1, nvar),
+    cbind(rep(-1, ncol(M)), tM),
+    cbind(rep(-1, ncol(M)), -tM),
     if(!allow.negative.weights) {
       Matrix::cBind(0, Matrix::diag(-1, nrow(M), nrow(M)))
     } else {
@@ -136,7 +136,7 @@ approx.balance.mosek.dual = function(M,
       numeric()
     }
   )
-  A.primal = plyr::rbind.fill.matrix(A.primal.list)
+  A.primal = Reduce(rbind, A.primal.list)
   
   gamma.max = 1/nrow(M)^(2/3)
   bvec = c(1,
