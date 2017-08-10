@@ -111,8 +111,8 @@ ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 			
 		} else if (fit.method == "none") {
 			
-		  mu.main[treatment.status + 1] = mean(predictions[W.idx])
-		  predictions[W.idx] =mu.main[treatment.status + 1]
+		  mu.main[treatment.status + 1] = mean(Y[W.idx])
+		  predictions[W.idx] = mu.main[treatment.status + 1]
 		  
 		} else {
 		  
