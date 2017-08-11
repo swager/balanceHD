@@ -9,7 +9,7 @@ cvals=(3)
 extravals=(2)
 exp=(2)
 
-reps=1000
+reps=400
 
 for ((i1=0; i1<${#betavals[@]} ;i1++))
 do
