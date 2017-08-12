@@ -21,7 +21,7 @@ residualBalance.mean = function(XW, YW,
                                 fit.method = c("elnet", "none"),
                                 alpha,
                                 optimizer = c("mosek", "pogs", "pogs.dual", "quadprog"),
-                                bound.gamma = FALSE,
+                                bound.gamma = TRUE,
                                 verbose = FALSE) {
   
   fit.method = match.arg(fit.method)
@@ -101,7 +101,7 @@ residualBalance.ate = function(X, Y, W,
                                scale.X = TRUE,
                                estimate.se = FALSE,
                                optimizer = c("mosek", "pogs", "pogs.dual", "quadprog"),
-                               bound.gamma = FALSE,
+                               bound.gamma = TRUE,
                                verbose = FALSE) {
   
   fit.method = match.arg(fit.method)

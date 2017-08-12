@@ -89,37 +89,26 @@ ipw.ate = function(X, Y, W, target.pop=c(0, 1), eps.threshold = 1/20,
 		stop("Invalid target.pop.")
 	}
 
-	target.avg = mean(Y[W %in% target.pop])
-	predictions = rep(target.avg, length(Y))
-	mu.main = c(target.avg, target.avg)
+	mu.main = c(mean(Y[W == 0]),  mean(Y[W == 1]))
+	predictions = mu.main[W + 1]
+	target.idx = which(W %in% target.pop)
 	
-	for (treatment.status in refit.W) {
-		
-		W.idx = which(W == treatment.status)
-		
-		if (fit.method == "elnet") {
-		  
-		  if (prop.weighted.fit) {
-		    sample.weights = prop.weights[W.idx] / mean(prop.weights[W.idx])
-		  } else {
-		    sample.weights = rep(1, length(W.idx))
-		  }
-		  
-			fit = glmnet::cv.glmnet(X[W.idx,], Y[W.idx], alpha = alpha.fit, weights = sample.weights)
-			predictions[W.idx] = predict(fit, newx = X[W.idx,])
-			mu.main[treatment.status + 1] = mean(predict(fit, newx = X))
-			
-		} else if (fit.method == "none") {
-			
-		  mu.main[treatment.status + 1] = mean(predictions[W.idx])
-		  predictions[W.idx] =mu.main[treatment.status + 1]
-		  
-		} else {
-		  
-			stop("Invalid choice for fit.method.")
-		  
-		}
-		
+	if (fit.method != "none") {
+	  for (treatment.status in refit.W) {
+	    W.idx = which(W == treatment.status)
+	    if (fit.method == "elnet") {
+	      if (prop.weighted.fit) {
+	        sample.weights = prop.weights[W.idx] / mean(prop.weights[W.idx])
+	      } else {
+	        sample.weights = rep(1, length(W.idx))
+	      }
+	      fit = glmnet::cv.glmnet(X[W.idx,], Y[W.idx], alpha = alpha.fit, weights = sample.weights)
+	      predictions[W.idx] = predict(fit, newx = X[W.idx,])
+	      mu.main[treatment.status + 1] = mean(predict(fit, newx = X[target.idx,]))
+	    } else {
+	      stop("Invalid choice for fit.method.")
+	    }
+	  }
 	}
 
 	residuals = Y - predictions
