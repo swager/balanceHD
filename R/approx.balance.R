@@ -13,6 +13,7 @@
 #'                  must be installed separately. Quadprog is the default
 #'                  R solver.
 #' @param bound.gamma whether upper bound on gamma should be imposed
+#' @param gamma.max specific upper bound for gamma (ignored if bound.gamma = FALSE)
 #' @param verbose whether the optimizer should print progress information
 #'
 #' @return gamma, the minimizer of (*)
@@ -24,6 +25,7 @@ approx.balance = function(M,
                           allow.negative.weights = FALSE,
                           optimizer = c("mosek", "pogs", "pogs.dual", "quadprog"),
                           bound.gamma = FALSE,
+                          gamma.max = 1/nrow(M)^(2/3),
                           verbose = FALSE) {
   
   if (zeta <= 0 || zeta >= 1) {
@@ -34,7 +36,7 @@ approx.balance = function(M,
   
   if (optimizer == "mosek") {
     if (suppressWarnings(require("Rmosek", quietly = TRUE))) {
-      gamma = approx.balance.mosek.dual(M, balance.target, zeta, allow.negative.weights, bound.gamma, verbose)
+      gamma = approx.balance.mosek.dual(M, balance.target, zeta, allow.negative.weights, bound.gamma, gamma.max, verbose)
     } else {
       if (suppressWarnings(require("pogs", quietly = TRUE))) {
         warning("The mosek optimizer is not installed. Using pogs instead.")
@@ -49,7 +51,7 @@ approx.balance = function(M,
   if (optimizer %in% c("pogs", "pogs.dual")) {
     if (suppressWarnings(require("pogs", quietly = TRUE))) {
       if (optimizer == "pogs") {
-        gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights, bound.gamma, verbose)
+        gamma = approx.balance.pogs(M, balance.target, zeta, allow.negative.weights, bound.gamma, gamma.max, verbose)
       } else {
         if (bound.gamma) {warning("bound.gamma = TRUE not implemented for this optimizer")}
         gamma = approx.balance.pogs.dual(M, balance.target, zeta, allow.negative.weights, verbose)
@@ -108,6 +110,7 @@ approx.balance.mosek.dual = function(M,
                                      zeta = 0.5,
                                      allow.negative.weights = FALSE,
                                      bound.gamma = FALSE,
+                                     gamma.max = 1/nrow(M)^(2/3),
                                      verbose = FALSE) {
   
   # The primal problem is:
@@ -138,7 +141,6 @@ approx.balance.mosek.dual = function(M,
   )
   A.primal = Reduce(rbind, A.primal.list)
   
-  gamma.max = 1/nrow(M)^(2/3)
   bvec = c(1,
            balance.target,
            -balance.target,
@@ -211,6 +213,7 @@ approx.balance.pogs = function(M,
                                zeta = 0.5,
                                allow.negative.weights = FALSE,
                                bound.gamma = FALSE,
+                               gamma.max = 1/nrow(M)^(2/3),
                                verbose = FALSE) {
   
   # Our original problem is the following:
@@ -247,7 +250,6 @@ approx.balance.pogs = function(M,
   }
   
   if (bound.gamma) {
-    gamma.max = 1/nrow(M)^(2/3)
     f$h = c(f$h, kIndLe0(nrow(M)))
     f$b = c(f$b, rep(0, nrow(M)))
     A = rbind(A, cbind(diag(1, nrow(M)), -gamma.max, 0))
