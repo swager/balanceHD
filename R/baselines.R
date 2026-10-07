@@ -83,18 +83,19 @@ twostep.lasso.ate = function(X, Y, W, target.pop=c(0, 1), fit.propensity = TRUE,
 	}
 	
 	if (length(strong.coef) == 0) {
-		return(naive.ate(X, Y, W, estimate.se = TRUE))
+		return(naive.ate(X, Y, W, estimate.se = estimate.se))
 	}
 	
 	twostep.raw = lapply(0:1, function(ww) {
 		if (length(strong.coef) < 0.95 * sum(W == ww)) {
 			coefs = strong.coef
 		} else {
-			coefs = which(strong.coef %in% coef(list(lasso.fit0, lasso.fit1)[[1 + ww]])[-1] != 0)
+			# keep the selected features that this arm's own lasso also selects
+			arm.coef = as.numeric(coef(list(lasso.fit0, lasso.fit1)[[1 + ww]]))[-1]
+			coefs = strong.coef[arm.coef[strong.coef] != 0]
 		}
 	
 		repeat {
-			print(coefs)
 			reg.df = data.frame(feat = X[,coefs], Y = Y, row.names = 1:nrow(X))
 			center = apply(reg.df[target.idx,,drop=FALSE], 2, mean)
 			center.df = data.frame(matrix(center, 1, ncol(reg.df)))
